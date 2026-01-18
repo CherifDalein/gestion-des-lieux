@@ -1,4 +1,4 @@
 package org.example.gestiondeslieux.controller;
 
-public class UtilisateurController {
+public class UserController {
 }

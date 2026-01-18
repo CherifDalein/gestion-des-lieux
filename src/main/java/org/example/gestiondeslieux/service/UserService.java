@@ -1,4 +1,4 @@
 package org.example.gestiondeslieux.service;
 
-public class UtilisateurService {
+public class UserService {
 }

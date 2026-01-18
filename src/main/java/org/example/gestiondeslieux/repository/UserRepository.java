@@ -1,4 +1,4 @@
 package org.example.gestiondeslieux.repository;
 
-public class UtilisateurRepository {
+public class UserRepository {
 }
