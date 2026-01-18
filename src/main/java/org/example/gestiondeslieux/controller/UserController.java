@@ -28,4 +28,15 @@ public class UserController {
         }
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody User loginRequest) {
+        try {
+            String token = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
+            return ResponseEntity.ok("{\"token\":\"" + token + "\"}");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
+
 }
