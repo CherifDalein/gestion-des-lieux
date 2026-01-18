@@ -42,6 +42,6 @@ public class UserService {
             throw new Exception("Invalid password");
         }
 
-        return JwtUtil.generateToken(user.getEmail());
+        return JwtUtil.generateToken(user.getId(),user.getEmail());
     }
 }

@@ -9,13 +9,13 @@ import java.util.Date;
 
 public class JwtUtil {
 
-    // Génère une clé sécurisée pour HS256
     private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private static final long EXPIRATION_MS = 24 * 60 * 60 * 1000; // 1 jour
 
-    public static String generateToken(String email) {
+    public static String generateToken(Long userId, String email) {
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(email)                  // email comme subject
+                .claim("userId", userId)            // ajout de l'ID dans les claims
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
                 .signWith(SECRET_KEY)
@@ -29,5 +29,14 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public static Long getUserIdFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("userId", Long.class);
     }
 }
