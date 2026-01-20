@@ -19,7 +19,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/h2-console/**",
                                 "/api/users/register",
-                                "/api/users/login"
+                                "/api/users/login",
+
+                                // Swagger
+                                "/api-docs/**",         // JSON OpenAPI
+                                "/swagger-ui/**"        // UI
                         ).permitAll()
 
                         // Toutes les autres requêtes nécessitent auth
