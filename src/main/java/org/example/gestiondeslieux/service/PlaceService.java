@@ -11,8 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Data
-@Service
+@Service // CORRECTION : Suppression de @Data
 public class PlaceService {
 
     private final PlaceRepository placeRepository;
@@ -21,9 +20,7 @@ public class PlaceService {
         this.placeRepository = placeRepository;
     }
 
-    public Place createPlace(CreatePlaceRequest request) {
-
-        // Validation GPS simple
+    public Place createPlace(CreatePlaceRequest request, Long userId) {
         if (request.getLatitude() < -90 || request.getLatitude() > 90 ||
                 request.getLongitude() < -180 || request.getLongitude() > 180) {
             throw new IllegalArgumentException("Coordonnées GPS invalides");
@@ -34,7 +31,7 @@ public class PlaceService {
         place.setLongitude(request.getLongitude());
         place.setTitle(request.getTitle());
         place.setDescription(request.getDescription());
-        place.setUserId(UUID.fromString("411a8d32-0661-4c9a-8daf-54a10fc49804"));
+        place.setUserId(userId);
 
         if (request.getTags() != null) {
             place.setTags(
