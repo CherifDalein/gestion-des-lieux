@@ -20,6 +20,7 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/api/users/register",
                                 "/api/users/login",
+                                "/api/places/**",
 
                                 // Swagger
                                 "/api-docs/**",         // JSON OpenAPI
