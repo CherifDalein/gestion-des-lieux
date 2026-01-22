@@ -6,6 +6,8 @@ import org.example.gestiondeslieux.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
 import lombok.Data;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -45,5 +47,34 @@ public class PlaceService {
 
         return placeRepository.save(place);
     }
+
+    public List<Place> getAllPlaces() {
+        return placeRepository.findAll();
+    }
+
+    public Optional<Place> getPlaceById(UUID id) {
+        return placeRepository.findById(id);
+    }
+
+    public Place updatePlace(UUID id, CreatePlaceRequest request) {
+        return placeRepository.findById(id).map(existingPlace -> {
+            existingPlace.setTitle(request.getTitle());
+            existingPlace.setDescription(request.getDescription());
+            existingPlace.setLatitude(request.getLatitude());
+            existingPlace.setLongitude(request.getLongitude());
+            existingPlace.setTags(request.getTags());
+            return placeRepository.save(existingPlace);
+        }).orElseThrow(()-> new RuntimeException("Lieu non trouvé"));
+    }
+
+
+    public boolean deletePlace(UUID id) {
+        if (placeRepository.existsById(id)) {
+            placeRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
 }
 
