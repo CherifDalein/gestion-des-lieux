@@ -16,7 +16,7 @@ public class Place {
     private UUID id;
 
     @Column(nullable = false)
-    private UUID userId;
+    private Long userId;
 
     private String title;
 
@@ -24,10 +24,10 @@ public class Place {
     private String description;
 
     @Column(nullable = false)
-    private  Double latitude;
+    private Double latitude;
+
     @Column(nullable = false)
     private Double longitude;
-
 
     @ElementCollection
     @CollectionTable(
@@ -39,15 +39,9 @@ public class Place {
 
     private Instant createdAt;
 
-    // Constructors
-    public Place() {}
-
     @PrePersist
     public void onCreate() {
         this.createdAt = Instant.now();
     }
-
-    //Getters and Setters
-
 }
 
