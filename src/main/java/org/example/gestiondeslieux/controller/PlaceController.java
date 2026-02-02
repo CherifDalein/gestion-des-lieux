@@ -2,6 +2,7 @@ package org.example.gestiondeslieux.controller;
 
 
 import jakarta.validation.Valid;
+import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 import org.example.gestiondeslieux.dto.CreatePlaceRequest;
 import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.service.PlaceService;
@@ -105,5 +106,28 @@ public class PlaceController {
     /*private boolean isTokenValid(String token) {
         return token != null && token.startsWith("Bearer ");
     }*/
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Place>> searchPlaces(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            Authentication authentication
+    ) {
+        // Sécurité : utilisateur connecté
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        List<Place> results = placeService.search(
+                keyword,
+                tag,
+                lat,
+                lng
+        );
+
+        return ResponseEntity.ok(results);
+    }
 
 }

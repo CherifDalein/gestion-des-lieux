@@ -76,5 +76,19 @@ public class PlaceService {
         return false;
     }
 
+    public List<Place> search(
+            String keyword,
+            String tag,
+            Double lat,
+            Double lng
+    ) {
+        return placeRepository.searchPlaces(
+                keyword,
+                tag,
+                lat,
+                lng
+        );
+    }
+
 }
 
