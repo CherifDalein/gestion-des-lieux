@@ -36,6 +36,9 @@ public interface PlaceRepository extends JpaRepository<Place, UUID> {
             @Param("keyword") String keyword,
             @Param("tag") String tag,
             @Param("lat") Double lat,
-            @Param("lng") Double lng
+            @Param("lng") Double lng,
+            @Param("radius") Double radius
     );
+
+    List<Place> findByTagsContaining(String tag);
 }

@@ -2,7 +2,7 @@ package org.example.gestiondeslieux.controller;
 
 
 import jakarta.validation.Valid;
-import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
+import org.springframework.security.core.Authentication;
 import org.example.gestiondeslieux.dto.CreatePlaceRequest;
 import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.service.PlaceService;
@@ -28,14 +28,15 @@ public class PlaceController {
     @PostMapping
     public ResponseEntity<?> createPlace(
             @Valid @RequestBody CreatePlaceRequest request,
-            @RequestHeader("Authorization") String token
+            Authentication authentication
     ) {
-        // Ici : vérification du token (simplifiée)
-        if (token == null || !token.startsWith("Bearer ")) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Place place = placeService.createPlace(request);
+        Long userId = (Long) authentication.getPrincipal();
+
+        Place place = placeService.createPlace(request, userId);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -44,6 +45,7 @@ public class PlaceController {
                         "message", "Lieu créé avec succès"
                 ));
     }
+
 
     @GetMapping
     public ResponseEntity<List<Place>> getAllPlaces(
@@ -113,6 +115,7 @@ public class PlaceController {
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double radius,
             Authentication authentication
     ) {
         // Sécurité : utilisateur connecté
@@ -124,7 +127,8 @@ public class PlaceController {
                 keyword,
                 tag,
                 lat,
-                lng
+                lng,
+                radius
         );
 
         return ResponseEntity.ok(results);
