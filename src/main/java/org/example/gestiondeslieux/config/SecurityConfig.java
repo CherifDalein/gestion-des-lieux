@@ -30,6 +30,7 @@ public class SecurityConfig {
                         new JwtAuthenticationFilter(),
                         UsernamePasswordAuthenticationFilter.class
                 )
+
                 .formLogin(form -> form.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
