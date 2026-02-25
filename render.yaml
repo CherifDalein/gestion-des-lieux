@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: gestion-des-lieux
+    runtime: docker
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:h2:file:/var/data/lieux_db;MODE=MySQL;DB_CLOSE_DELAY=-1
+      - key: APP_UPLOAD_DIR
+        value: /var/data/uploads/images
+      - key: AUTH_TOKEN_JWT_SECRET
+        generateValue: true
+      # Mets l'URL publique Render de ton service apres le 1er deploy.
+      - key: APP_SHARE_BASE_URL
+        value: https://gestion-des-lieux.onrender.com
+    disk:
+      name: h2-data
+      mountPath: /var/data
+      sizeGB: 1
