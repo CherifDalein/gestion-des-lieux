@@ -1,0 +1,130 @@
+package org.example.gestiondeslieux.service.collection;
+
+import lombok.RequiredArgsConstructor;
+import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
+import org.example.gestiondeslieux.model.Collection;
+import org.example.gestiondeslieux.model.Place;
+import org.example.gestiondeslieux.model.User;
+import org.example.gestiondeslieux.repository.CollectionRepository;
+import org.example.gestiondeslieux.repository.PlaceRepository;
+import org.example.gestiondeslieux.repository.UserRepository;
+import org.example.gestiondeslieux.request.CreateCollectionRequest;
+import org.example.gestiondeslieux.request.UpdateCollectionRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class CollectionService implements ICollectionService {
+
+    private final CollectionRepository collectionRepository;
+    private final PlaceRepository placeRepository;
+    private final UserRepository userRepository;
+
+    @Override
+    @Transactional
+    public Collection createCollection(CreateCollectionRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        Collection collection = Collection.builder()
+                .name(request.getName())
+                .tagFilter(request.getTagFilter())
+                .user(user)
+                .isShared(false)
+                .build();
+        return collectionRepository.save(collection);
+    }
+
+    @Override
+    @Transactional
+    public Collection updateCollection(Long id, UpdateCollectionRequest request, Long userId) {
+        Collection collection = getCollectionById(id, userId);
+        if (request.getName() != null) collection.setName(request.getName());
+        if (request.getTagFilter() != null) collection.setTagFilter(request.getTagFilter());
+        return collectionRepository.save(collection);
+    }
+
+    @Override
+    @Transactional
+    public void deleteCollection(Long id, Long userId) {
+        Collection collection = getCollectionById(id, userId);
+        collectionRepository.delete(collection);
+    }
+
+    @Override
+    public Collection getCollectionById(Long id, Long userId) {
+        Collection collection = collectionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Collection", "id", id));
+        if (!collection.getUser().getId().equals(userId)) {
+            throw new ResourceNotFoundException("Collection", "id", id);
+        }
+        return collection;
+    }
+
+    @Override
+    public List<Collection> getCollectionsByUser(Long userId) {
+        return collectionRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Page<Place> getPlacesInCollection(Long collectionId, Long userId, Pageable pageable) {
+        Collection collection = getCollectionById(collectionId, userId);
+        if (collection.getTagFilter() == null) {
+            return placeRepository.findByUserId(userId, pageable);
+        }
+        return placeRepository.findByUserIdAndTagPaged(userId, collection.getTagFilter(), pageable);
+    }
+
+    @Override
+    @Transactional
+    public void syncCollectionsForUser(Long userId) {
+        getOrCreateAllPlacesCollection(userId);
+        List<String> tags = placeRepository.findDistinctTagsByUserId(userId);
+        List<Collection> existing = collectionRepository.findByUserId(userId);
+
+        // Create missing collections for new tags
+        for (String tag : tags) {
+            boolean exists = existing.stream()
+                    .anyMatch(c -> tag.equals(c.getTagFilter()));
+            if (!exists) {
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                Collection c = Collection.builder()
+                        .name(tag)
+                        .tagFilter(tag)
+                        .user(user)
+                        .isShared(false)
+                        .build();
+                collectionRepository.save(c);
+            }
+        }
+
+        // Remove collections whose tag no longer exists
+        for (Collection c : existing) {
+            if (c.getTagFilter() != null && !tags.contains(c.getTagFilter())) {
+                collectionRepository.delete(c);
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public Collection getOrCreateAllPlacesCollection(Long userId) {
+        return collectionRepository.findByUserIdAndTagFilterIsNull(userId)
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                    Collection c = Collection.builder()
+                            .name("Tous les lieux")
+                            .tagFilter(null)
+                            .user(user)
+                            .isShared(false)
+                            .build();
+                    return collectionRepository.save(c);
+                });
+    }
+}
