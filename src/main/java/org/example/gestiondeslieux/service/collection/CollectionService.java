@@ -154,12 +154,6 @@ public class CollectionService implements ICollectionService {
                     .getPlaces(collection.getId(), null, null, null))
                     .withRel("places"));
             dto.add(linkTo(methodOn(CollectionApiController.class)
-                    .updateCollection(collection.getId(), null, null))
-                    .withRel("update"));
-            dto.add(linkTo(methodOn(CollectionApiController.class)
-                    .deleteCollection(collection.getId(), null))
-                    .withRel("delete"));
-            dto.add(linkTo(methodOn(CollectionApiController.class)
                     .shareCollection(collection.getId(), null, null))
                     .withRel("share"));
         } catch (Exception ignored) {

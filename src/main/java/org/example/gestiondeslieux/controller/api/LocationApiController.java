@@ -29,7 +29,7 @@ public class LocationApiController {
     private String baseUrl;
 
     @PostMapping("/update")
-    @Operation(summary = "Mettre à jour la position courante")
+    @Operation(summary = "Créer ou mettre à jour la position courante (upsert)")
     public ResponseEntity<ApiResponse<CurrentLocationDto>> update(@Valid @RequestBody UpdateLocationRequest req,
                                                                   Authentication auth) {
         CurrentLocation loc = locationService.updateLocation(req, AuthContextUtils.requireUserId(auth));

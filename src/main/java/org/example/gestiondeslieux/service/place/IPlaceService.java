@@ -1,6 +1,7 @@
 package org.example.gestiondeslieux.service.place;
 
 import org.example.gestiondeslieux.enums.ExportFormat;
+import org.example.gestiondeslieux.dto.ImportExecutionResult;
 import org.example.gestiondeslieux.dto.PlaceDto;
 import org.example.gestiondeslieux.dto.PlaceWithDistanceDto;
 import org.example.gestiondeslieux.model.Place;
@@ -27,7 +28,7 @@ public interface IPlaceService {
     void removeTagFromPlace(Long placeId, String tag, Long userId);
     String exportCollection(Long collectionId, ExportFormat format, Long userId);
     String exportPlaceById(Long placeId, ExportFormat format, Long userId);
-    List<Place> importPlaces(String content, ExportFormat format, Long userId);
+    ImportExecutionResult importPlaces(String content, ExportFormat format, Long userId, List<String> defaultTags, boolean skipDuplicates);
     PlaceDto convertToDto(Place place);
     PlaceWithDistanceDto convertNearbyToDto(Object[] row);
 }

@@ -7,14 +7,21 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.PlaceDto;
 import org.example.gestiondeslieux.dto.PlaceWithDistanceDto;
+import org.example.gestiondeslieux.dto.ShareResponse;
+import org.example.gestiondeslieux.enums.Permission;
+import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.model.Place;
+import org.example.gestiondeslieux.request.CreateTokenRequest;
 import org.example.gestiondeslieux.request.CreatePlaceRequest;
+import org.example.gestiondeslieux.request.ShareTokenRequest;
 import org.example.gestiondeslieux.request.UpdatePlaceRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.image.IPlaceImageService;
 import org.example.gestiondeslieux.service.place.IPlaceService;
+import org.example.gestiondeslieux.service.token.IAccessTokenService;
 import org.example.gestiondeslieux.util.HttpCacheUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -35,6 +42,10 @@ public class PlaceApiController {
 
     private final IPlaceService placeService;
     private final IPlaceImageService placeImageService;
+    private final IAccessTokenService accessTokenService;
+
+    @Value("${app.share.base-url:http://localhost:8080}")
+    private String baseUrl;
 
     @GetMapping
     @Operation(summary = "Lister les lieux de l'utilisateur")
@@ -93,6 +104,30 @@ public class PlaceApiController {
     public ResponseEntity<Void> deletePlace(@PathVariable Long id, Authentication auth) {
         placeService.deletePlace(id, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/share")
+    @Operation(summary = "Partager un lieu via token")
+    public ResponseEntity<ApiResponse<ShareResponse>> sharePlace(
+            @PathVariable Long id,
+            @RequestBody(required = false) ShareTokenRequest req,
+            Authentication auth) {
+        Long userId = AuthContextUtils.requireUserId(auth);
+        CreateTokenRequest createReq = new CreateTokenRequest();
+        createReq.setResourceType(ResourceType.PLACE);
+        createReq.setResourceId(id);
+        createReq.setPermission(req != null && req.getPermission() != null ? req.getPermission() : Permission.READ);
+        createReq.setExpiresAt(req != null ? req.getExpiresAt() : null);
+        createReq.setLabel(req != null ? req.getLabel() : null);
+        var token = accessTokenService.createToken(createReq, userId);
+        ShareResponse sr = new ShareResponse();
+        sr.setToken(token.getToken());
+        sr.setUrl(baseUrl + "/api/places/" + id + "?token=" + token.getToken());
+        sr.setPermission(token.getPermission());
+        sr.setResourceType(token.getResourceType());
+        sr.setResourceId(token.getResourceId());
+        sr.setExpiresAt(token.getExpiresAt());
+        return ResponseEntity.ok(new ApiResponse<>("Lieu partagé avec succès", sr));
     }
 
     @GetMapping("/search")

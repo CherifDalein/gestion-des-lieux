@@ -3,7 +3,6 @@ package org.example.gestiondeslieux.controller.api;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.CollectionDto;
 import org.example.gestiondeslieux.dto.PlaceDto;
@@ -13,9 +12,8 @@ import org.example.gestiondeslieux.enums.Permission;
 import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.model.Collection;
-import org.example.gestiondeslieux.request.CreateCollectionRequest;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
-import org.example.gestiondeslieux.request.UpdateCollectionRequest;
+import org.example.gestiondeslieux.request.ShareTokenRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.collection.ICollectionService;
@@ -67,15 +65,6 @@ public class CollectionApiController {
         return ResponseEntity.ok(new ApiResponse<>("Collections récupérées avec succès", list));
     }
 
-    @PostMapping
-    @Operation(summary = "Créer une collection")
-    public ResponseEntity<ApiResponse<CollectionDto>> createCollection(
-            @Valid @RequestBody CreateCollectionRequest req, Authentication auth) {
-        Collection c = collectionService.createCollection(req, AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.status(201)
-                .body(new ApiResponse<>("Collection créée avec succès", collectionService.convertToDto(c)));
-    }
-
     @GetMapping("/{id}")
     @Operation(summary = "Obtenir une collection")
     public ResponseEntity<ApiResponse<CollectionDto>> getCollection(@PathVariable Long id,
@@ -88,24 +77,6 @@ public class CollectionApiController {
         ApiResponse<CollectionDto> body = new ApiResponse<>("Collection récupérée avec succès", dto);
         return HttpCacheUtils.buildCachedResponse(body, c.getCreatedAt(), request,
                 "private, no-cache");
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Modifier une collection")
-    public ResponseEntity<ApiResponse<CollectionDto>> updateCollection(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateCollectionRequest req,
-            Authentication auth) {
-        Collection c = collectionService.updateCollection(id, req, AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.ok(new ApiResponse<>("Collection mise à jour avec succès",
-                collectionService.convertToDto(c)));
-    }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer une collection")
-    public ResponseEntity<Void> deleteCollection(@PathVariable Long id, Authentication auth) {
-        collectionService.deleteCollection(id, AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/places")
@@ -150,14 +121,16 @@ public class CollectionApiController {
     @Operation(summary = "Partager une collection via token")
     public ResponseEntity<ApiResponse<ShareResponse>> shareCollection(
             @PathVariable Long id,
-            @RequestBody(required = false) CreateTokenRequest req,
+            @RequestBody(required = false) ShareTokenRequest req,
             Authentication auth) {
         Long uid = AuthContextUtils.requireUserId(auth);
-        if (req == null) req = new CreateTokenRequest();
-        req.setResourceType(ResourceType.COLLECTION);
-        req.setResourceId(id);
-        if (req.getPermission() == null) req.setPermission(Permission.READ);
-        var token = accessTokenService.createToken(req, uid);
+        CreateTokenRequest createReq = new CreateTokenRequest();
+        createReq.setResourceType(ResourceType.COLLECTION);
+        createReq.setResourceId(id);
+        createReq.setPermission(req != null && req.getPermission() != null ? req.getPermission() : Permission.READ);
+        createReq.setExpiresAt(req != null ? req.getExpiresAt() : null);
+        createReq.setLabel(req != null ? req.getLabel() : null);
+        var token = accessTokenService.createToken(createReq, uid);
         ShareResponse sr = new ShareResponse();
         sr.setToken(token.getToken());
         sr.setUrl(baseUrl + "/api/collections/" + id + "?token=" + token.getToken());

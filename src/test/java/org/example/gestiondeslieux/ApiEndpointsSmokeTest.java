@@ -10,8 +10,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -137,17 +137,28 @@ class ApiEndpointsSmokeTest {
 
         mockMvc.perform(get("/api/collections").header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
-        JsonNode collection = postJson("/api/collections",
-                "{\"name\":\"Smoke Collection\",\"tagFilter\":\"smoke\"}",
-                accessToken, status().isCreated());
-        JsonNode collectionData = unwrapApiResponseData(collection);
-        long collectionId = collectionData.path("id").asLong();
+        JsonNode collections = getJson("/api/collections", accessToken, status().isOk());
+        JsonNode collectionsData = unwrapApiResponseData(collections);
+        long collectionId = findCollectionIdByTag(collectionsData, "updated");
+        if (collectionId < 0) {
+            throw new AssertionError("No automatic collection found for tag 'updated': " + collectionsData);
+        }
+        mockMvc.perform(post("/api/collections")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"manual\",\"tagFilter\":\"manual\"}"))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(put("/api/collections/" + collectionId)
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"manual\"}"))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(delete("/api/collections/" + collectionId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isMethodNotAllowed());
 
         mockMvc.perform(get("/api/collections/" + collectionId).header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
-        putJson("/api/collections/" + collectionId,
-                "{\"name\":\"Smoke Collection Updated\",\"tagFilter\":\"smoke\"}",
-                accessToken, status().isOk());
         mockMvc.perform(get("/api/collections/" + collectionId + "/places").header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/collections/" + collectionId + "/export")
@@ -160,6 +171,12 @@ class ApiEndpointsSmokeTest {
                 accessToken, status().isOk());
         JsonNode sharedCollectionData = unwrapApiResponseData(sharedCollection);
         String collectionShareToken = requireTextField(sharedCollectionData, "token");
+
+        JsonNode sharedPlace = postJson("/api/places/" + placeId + "/share",
+                "{\"label\":\"share-place-smoke\"}",
+                accessToken, status().isOk());
+        JsonNode sharedPlaceData = unwrapApiResponseData(sharedPlace);
+        String placeShareToken = requireTextField(sharedPlaceData, "token");
 
         JsonNode createdToken = postJson("/api/tokens",
                 """
@@ -181,7 +198,7 @@ class ApiEndpointsSmokeTest {
                 .andExpect(status().isOk());
 
         // Shared-token flows (without JWT)
-        mockMvc.perform(get("/api/places/" + placeId).param("token", placeToken))
+        mockMvc.perform(get("/api/places/" + placeId).param("token", placeShareToken))
                 .andExpect(status().is2xxSuccessful());
         mockMvc.perform(get("/api/collections/" + collectionId).param("token", collectionShareToken))
                 .andExpect(status().is2xxSuccessful());
@@ -208,16 +225,34 @@ class ApiEndpointsSmokeTest {
         String geojson = """
                 {"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[2.33,48.86]},"properties":{"title":"Imported Smoke"}}]}
                 """;
-        postJson("/api/import",
-                "{\"content\":" + objectMapper.writeValueAsString(geojson) + ",\"format\":\"GEOJSON\"}",
+        JsonNode firstImport = postJson("/api/import",
+                "{\"content\":" + objectMapper.writeValueAsString(geojson) + ",\"format\":\"GEOJSON\",\"defaultTags\":[\"smoke-import\"],\"skipDuplicates\":true}",
                 accessToken, status().isOk());
+        JsonNode firstImportData = unwrapApiResponseData(firstImport);
+        if (firstImportData.path("imported").asInt(-1) < 1) {
+            throw new AssertionError("Expected first import to import at least one place: " + firstImportData);
+        }
+        if (!hasTagInImportedPlaces(firstImportData.path("places"), "smoke-import")) {
+            throw new AssertionError("Expected default tag 'smoke-import' in first import: " + firstImportData);
+        }
+
         MockMultipartFile importFile = new MockMultipartFile(
                 "file", "import.geojson", MediaType.APPLICATION_JSON_VALUE, geojson.getBytes(StandardCharsets.UTF_8));
-        multipartPost("/api/import", importFile, accessToken, status().isOk());
+        JsonNode secondImport = multipartPost("/api/import", importFile, accessToken, status().isOk());
+        JsonNode secondImportData = unwrapApiResponseData(secondImport);
+        if (secondImportData.path("imported").asInt(-1) != 0 || secondImportData.path("skipped").asInt(0) < 1) {
+            throw new AssertionError("Expected duplicate import to be skipped: " + secondImportData);
+        }
+
+        JsonNode thirdImport = postJson("/api/import",
+                "{\"content\":" + objectMapper.writeValueAsString(geojson) + ",\"format\":\"GEOJSON\",\"skipDuplicates\":false}",
+                accessToken, status().isOk());
+        JsonNode thirdImportData = unwrapApiResponseData(thirdImport);
+        if (thirdImportData.path("imported").asInt(-1) < 1) {
+            throw new AssertionError("Expected import with skipDuplicates=false to insert again: " + thirdImportData);
+        }
 
         mockMvc.perform(delete("/api/tokens/" + tokenId).header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/collections/" + collectionId).header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isNoContent());
         mockMvc.perform(delete("/api/places/" + placeId).header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isNoContent());
@@ -239,6 +274,18 @@ class ApiEndpointsSmokeTest {
         var builder = post(url);
         if (withJsonContentType) builder.contentType(MediaType.APPLICATION_JSON);
         if (body != null && !body.isBlank()) builder.content(body);
+        if (token != null) builder.header("Authorization", "Bearer " + token);
+        MvcResult result = mockMvc.perform(builder).andExpect(expected).andReturn();
+        String content = result.getResponse().getContentAsString();
+        if (content == null || content.isBlank()) {
+            return objectMapper.createObjectNode();
+        }
+        return objectMapper.readTree(content);
+    }
+
+    private JsonNode getJson(String url, String token,
+                             org.springframework.test.web.servlet.ResultMatcher expected) throws Exception {
+        var builder = get(url);
         if (token != null) builder.header("Authorization", "Bearer " + token);
         MvcResult result = mockMvc.perform(builder).andExpect(expected).andReturn();
         String content = result.getResponse().getContentAsString();
@@ -294,10 +341,10 @@ class ApiEndpointsSmokeTest {
 
     private String requireTextField(JsonNode node, String fieldName) {
         JsonNode fieldNode = node.path(fieldName);
-        if (fieldNode.isMissingNode() || fieldNode.isNull() || !fieldNode.isString()) {
+        if (fieldNode.isMissingNode() || fieldNode.isNull() || !fieldNode.isTextual()) {
             throw new AssertionError("Expected textual field '" + fieldName + "' in response: " + node);
         }
-        return fieldNode.stringValue();
+        return fieldNode.asText();
     }
 
     private JsonNode unwrapApiResponseData(JsonNode response) {
@@ -306,5 +353,34 @@ class ApiEndpointsSmokeTest {
             throw new AssertionError("Expected 'data' field in API response: " + response);
         }
         return dataNode;
+    }
+
+    private long findCollectionIdByTag(JsonNode collections, String expectedTag) {
+        if (!collections.isArray()) return -1L;
+        for (JsonNode c : collections) {
+            String tag = c.path("tagFilter").asText(null);
+            if (expectedTag.equals(tag)) {
+                return c.path("id").asLong(-1L);
+            }
+        }
+        return -1L;
+    }
+
+    private boolean hasTagInImportedPlaces(JsonNode places, String expectedTag) {
+        if (!places.isArray()) {
+            return false;
+        }
+        for (JsonNode place : places) {
+            JsonNode tags = place.path("tags");
+            if (!tags.isArray()) {
+                continue;
+            }
+            for (JsonNode tag : tags) {
+                if (expectedTag.equals(tag.asText())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

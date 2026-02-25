@@ -9,8 +9,8 @@ public interface IExportService {
     String exportToGpx(List<Place> places, String collectionName);
     String exportToKml(List<Place> places, String collectionName);
     String exportToGeoJson(List<Place> places, String collectionName);
-    List<Place> importFromGpx(String gpxContent, Long userId);
-    List<Place> importFromKml(String kmlContent, Long userId);
-    List<Place> importFromGeoJson(String geoJsonContent, Long userId);
+    List<Place> importFromGpx(String gpxContent);
+    List<Place> importFromKml(String kmlContent);
+    List<Place> importFromGeoJson(String geoJsonContent);
     ExportFormat detectFormat(String content);
 }

@@ -62,4 +62,6 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                                Pageable pageable);
 
     boolean existsByIdAndUserId(Long id, Long userId);
+    boolean existsByUserIdAndTitleIgnoreCaseAndLatitudeAndLongitude(
+            Long userId, String title, Double latitude, Double longitude);
 }

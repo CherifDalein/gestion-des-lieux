@@ -2,6 +2,7 @@ package org.example.gestiondeslieux.service.place;
 
 import org.example.gestiondeslieux.controller.api.ImageApiController;
 import org.example.gestiondeslieux.controller.api.PlaceApiController;
+import org.example.gestiondeslieux.dto.ImportExecutionResult;
 import org.example.gestiondeslieux.dto.PlaceDto;
 import org.example.gestiondeslieux.dto.PlaceWithDistanceDto;
 import org.example.gestiondeslieux.enums.ExportFormat;
@@ -28,7 +29,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -195,12 +198,59 @@ public class PlaceService implements IPlaceService {
 
     @Override
     @Transactional
-    public List<Place> importPlaces(String content, ExportFormat format, Long userId) {
-        return switch (format) {
-            case GPX     -> exportService.importFromGpx(content, userId);
-            case KML     -> exportService.importFromKml(content, userId);
-            case GEOJSON -> exportService.importFromGeoJson(content, userId);
+    public ImportExecutionResult importPlaces(String content,
+                                              ExportFormat format,
+                                              Long userId,
+                                              List<String> defaultTags,
+                                              boolean skipDuplicates) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        List<Place> parsed = switch (format) {
+            case GPX -> exportService.importFromGpx(content);
+            case KML -> exportService.importFromKml(content);
+            case GEOJSON -> exportService.importFromGeoJson(content);
         };
+
+        ImportExecutionResult result = new ImportExecutionResult();
+        Set<String> seenInPayload = new LinkedHashSet<>();
+
+        for (Place candidate : parsed) {
+            String title = normalizeTitle(candidate.getTitle());
+            Double latitude = candidate.getLatitude();
+            Double longitude = candidate.getLongitude();
+
+            if (latitude == null || longitude == null) {
+                result.getErrors().add("Lieu ignore: coordonnees manquantes ou invalides");
+                continue;
+            }
+
+            String duplicateKey = buildDuplicateKey(title, latitude, longitude);
+            boolean duplicateInPayload = !seenInPayload.add(duplicateKey);
+            boolean duplicateInDatabase = placeRepository
+                    .existsByUserIdAndTitleIgnoreCaseAndLatitudeAndLongitude(userId, title, latitude, longitude);
+
+            if (skipDuplicates && (duplicateInPayload || duplicateInDatabase)) {
+                result.setSkipped(result.getSkipped() + 1);
+                continue;
+            }
+
+            Place place = Place.builder()
+                    .title(title)
+                    .description(candidate.getDescription())
+                    .latitude(latitude)
+                    .longitude(longitude)
+                    .imageUrl(candidate.getImageUrl())
+                    .tags(mergeTags(candidate.getTags(), defaultTags))
+                    .user(user)
+                    .build();
+            result.getImportedPlaces().add(placeRepository.save(place));
+        }
+
+        if (!result.getImportedPlaces().isEmpty()) {
+            collectionService.syncCollectionsForUser(userId);
+        }
+        return result;
     }
 
     @Override
@@ -269,6 +319,36 @@ public class PlaceService implements IPlaceService {
             return Long.parseLong(imageUrl.substring(idx + 1));
         } catch (NumberFormatException ignored) {
             return null;
+        }
+    }
+
+    private String normalizeTitle(String title) {
+        return (title == null || title.isBlank()) ? "Imported" : title.trim();
+    }
+
+    private String buildDuplicateKey(String title, Double latitude, Double longitude) {
+        return title.toLowerCase() + "|" + latitude + "|" + longitude;
+    }
+
+    private List<String> mergeTags(List<String> importedTags, List<String> defaultTags) {
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        addNormalizedTags(merged, importedTags);
+        addNormalizedTags(merged, defaultTags);
+        return new ArrayList<>(merged);
+    }
+
+    private void addNormalizedTags(Set<String> target, List<String> source) {
+        if (source == null) {
+            return;
+        }
+        for (String tag : source) {
+            if (tag == null) {
+                continue;
+            }
+            String normalized = tag.trim();
+            if (!normalized.isEmpty()) {
+                target.add(normalized);
+            }
         }
     }
 }

@@ -3,10 +3,10 @@ package org.example.gestiondeslieux.controller.api;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.example.gestiondeslieux.dto.ImportExecutionResult;
 import org.example.gestiondeslieux.dto.ImportResultDto;
 import org.example.gestiondeslieux.enums.ExportFormat;
 import org.example.gestiondeslieux.exceptions.InvalidFormatException;
-import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.service.export.IExportService;
 import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
@@ -34,18 +34,22 @@ public class ImportApiController {
     public ResponseEntity<ApiResponse<ImportResultDto>> importFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String format,
+            @RequestParam(required = false) List<String> defaultTags,
+            @RequestParam(defaultValue = "true") boolean skipDuplicates,
             Authentication auth) throws IOException {
 
         Long userId = AuthContextUtils.requireUserId(auth);
         String content = new String(file.getBytes(), StandardCharsets.UTF_8);
         ExportFormat fmt = resolveFormat(format, content);
 
-        List<Place> imported = placeService.importPlaces(content, fmt, userId);
-        ImportResultDto result = new ImportResultDto();
-        result.setImported(imported.size());
-        result.setSkipped(0);
-        result.setErrors(List.of());
-        result.setPlaces(imported.stream().map(placeService::convertToDto).toList());
+        ImportExecutionResult execution = placeService.importPlaces(
+                content,
+                fmt,
+                userId,
+                defaultTags,
+                skipDuplicates
+        );
+        ImportResultDto result = toImportResultDto(execution);
         return ResponseEntity.ok(new ApiResponse<>("Import fichier terminé avec succès", result));
     }
 
@@ -61,13 +65,14 @@ public class ImportApiController {
                 ? req.getFormat()
                 : exportService.detectFormat(content);
 
-        List<Place> imported = placeService.importPlaces(content, fmt, userId);
-
-        ImportResultDto result = new ImportResultDto();
-        result.setImported(imported.size());
-        result.setSkipped(0);
-        result.setErrors(List.of());
-        result.setPlaces(imported.stream().map(placeService::convertToDto).toList());
+        ImportExecutionResult execution = placeService.importPlaces(
+                content,
+                fmt,
+                userId,
+                req.getDefaultTags(),
+                req.isSkipDuplicates()
+        );
+        ImportResultDto result = toImportResultDto(execution);
         return ResponseEntity.ok(new ApiResponse<>("Import JSON terminé avec succès", result));
     }
 
@@ -80,5 +85,14 @@ public class ImportApiController {
         } catch (IllegalArgumentException ex) {
             throw new InvalidFormatException(format, "format non supporte");
         }
+    }
+
+    private ImportResultDto toImportResultDto(ImportExecutionResult execution) {
+        ImportResultDto result = new ImportResultDto();
+        result.setImported(execution.getImportedPlaces().size());
+        result.setSkipped(execution.getSkipped());
+        result.setErrors(execution.getErrors());
+        result.setPlaces(execution.getImportedPlaces().stream().map(placeService::convertToDto).toList());
+        return result;
     }
 }
