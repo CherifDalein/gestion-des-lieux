@@ -15,14 +15,14 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 RUN addgroup --system spring && adduser --system --ingroup spring spring \
-    && mkdir -p /app/data /app/uploads/images \
+    && mkdir -p /app/data/uploads/images \
     && chown -R spring:spring /app
 
 COPY --from=build /workspace/build/libs/*.jar /app/app.jar
 
 ENV PORT=8080
 ENV SPRING_DATASOURCE_URL=jdbc:h2:file:/app/data/lieux_db;MODE=MySQL;DB_CLOSE_DELAY=-1
-ENV APP_UPLOAD_DIR=/app/uploads/images
+ENV APP_UPLOAD_DIR=/app/data/uploads/images
 
 EXPOSE 8080
 

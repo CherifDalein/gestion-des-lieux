@@ -6,9 +6,9 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:h2:file:/var/data/lieux_db;MODE=MySQL;DB_CLOSE_DELAY=-1
+        value: jdbc:h2:file:/app/data/lieux_db;MODE=MySQL;DB_CLOSE_DELAY=-1
       - key: APP_UPLOAD_DIR
-        value: /var/data/uploads/images
+        value: /app/data/uploads/images
       - key: AUTH_TOKEN_JWT_SECRET
         generateValue: true
       # Mets l'URL publique Render de ton service apres le 1er deploy.
@@ -16,5 +16,5 @@ services:
         value: https://gestion-des-lieux.onrender.com
     disk:
       name: h2-data
-      mountPath: /var/data
+      mountPath: /app/data
       sizeGB: 1
