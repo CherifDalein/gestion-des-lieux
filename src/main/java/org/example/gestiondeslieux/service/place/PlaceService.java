@@ -1,5 +1,9 @@
 package org.example.gestiondeslieux.service.place;
 
+import org.example.gestiondeslieux.controller.api.ImageApiController;
+import org.example.gestiondeslieux.controller.api.PlaceApiController;
+import org.example.gestiondeslieux.dto.PlaceDto;
+import org.example.gestiondeslieux.dto.PlaceWithDistanceDto;
 import org.example.gestiondeslieux.enums.ExportFormat;
 import org.example.gestiondeslieux.enums.Permission;
 import org.example.gestiondeslieux.enums.ResourceType;
@@ -14,6 +18,8 @@ import org.example.gestiondeslieux.request.UpdatePlaceRequest;
 import org.example.gestiondeslieux.service.collection.ICollectionService;
 import org.example.gestiondeslieux.service.export.IExportService;
 import org.example.gestiondeslieux.service.token.IAccessTokenService;
+import org.hibernate.Hibernate;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -24,6 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 @Service
 public class PlaceService implements IPlaceService {
 
@@ -32,18 +41,21 @@ public class PlaceService implements IPlaceService {
     private final ICollectionService collectionService;
     private final IAccessTokenService accessTokenService;
     private final IExportService exportService;
+    private final ModelMapper modelMapper;
 
     @Autowired
     public PlaceService(PlaceRepository placeRepository,
                         UserRepository userRepository,
                         @Lazy ICollectionService collectionService,
                         @Lazy IAccessTokenService accessTokenService,
-                        @Lazy IExportService exportService) {
+                        @Lazy IExportService exportService,
+                        ModelMapper modelMapper) {
         this.placeRepository = placeRepository;
         this.userRepository = userRepository;
         this.collectionService = collectionService;
         this.accessTokenService = accessTokenService;
         this.exportService = exportService;
+        this.modelMapper = modelMapper;
     }
 
     @Override
@@ -190,5 +202,74 @@ public class PlaceService implements IPlaceService {
             case KML     -> exportService.importFromKml(content, userId);
             case GEOJSON -> exportService.importFromGeoJson(content, userId);
         };
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PlaceDto convertToDto(Place place) {
+        Hibernate.initialize(place.getTags());
+        Hibernate.initialize(place.getUser());
+
+        PlaceDto dto = modelMapper.map(place, PlaceDto.class);
+        if (place.getUser() != null) {
+            dto.setUsername(place.getUser().getUsername());
+        }
+
+        try {
+            dto.add(linkTo(methodOn(PlaceApiController.class)
+                    .getPlace(place.getId(), null, null, null))
+                    .withSelfRel());
+            dto.add(linkTo(methodOn(PlaceApiController.class)
+                    .updatePlace(place.getId(), null, null))
+                    .withRel("update"));
+            dto.add(linkTo(methodOn(PlaceApiController.class)
+                    .deletePlace(place.getId(), null))
+                    .withRel("delete"));
+            dto.add(linkTo(methodOn(PlaceApiController.class)
+                    .addTag(place.getId(), "tag", null))
+                    .withRel("addTag"));
+            if (place.getImageUrl() != null && !place.getImageUrl().isBlank()) {
+                Long imageId = extractImageId(place.getImageUrl());
+                if (imageId != null) {
+                    dto.add(linkTo(methodOn(ImageApiController.class).getImage(imageId)).withRel("image"));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return dto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PlaceWithDistanceDto convertNearbyToDto(Object[] row) {
+        PlaceWithDistanceDto dto = new PlaceWithDistanceDto();
+        dto.setId(row[0] != null ? ((Number) row[0]).longValue() : null);
+        dto.setTitle((String) row[1]);
+        dto.setLatitude(row[2] != null ? ((Number) row[2]).doubleValue() : null);
+        dto.setLongitude(row[3] != null ? ((Number) row[3]).doubleValue() : null);
+        dto.setDistanceKm(row[4] != null ? ((Number) row[4]).doubleValue() : null);
+
+        try {
+            if (dto.getId() != null) {
+                dto.add(linkTo(methodOn(PlaceApiController.class)
+                        .getPlace(dto.getId(), null, null, null))
+                        .withSelfRel());
+            }
+        } catch (Exception ignored) {
+        }
+        return dto;
+    }
+
+    private Long extractImageId(String imageUrl) {
+        int idx = imageUrl.lastIndexOf('/');
+        if (idx < 0 || idx == imageUrl.length() - 1) {
+            return null;
+        }
+        try {
+            return Long.parseLong(imageUrl.substring(idx + 1));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }

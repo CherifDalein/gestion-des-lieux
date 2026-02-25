@@ -1,5 +1,6 @@
 package org.example.gestiondeslieux.service.token;
 
+import org.example.gestiondeslieux.dto.AccessTokenDto;
 import org.example.gestiondeslieux.enums.Permission;
 import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.model.AccessToken;
@@ -17,4 +18,5 @@ public interface IAccessTokenService {
     boolean hasPermission(String token, ResourceType type, Long resourceId, Permission required);
     void incrementAccessCount(String token);
     AccessToken getTokenByValue(String token);
+    AccessTokenDto convertToDto(AccessToken token);
 }

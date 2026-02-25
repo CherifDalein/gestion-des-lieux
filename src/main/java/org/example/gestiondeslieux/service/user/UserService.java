@@ -2,6 +2,7 @@ package org.example.gestiondeslieux.service.user;
 
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.UserDto;
+import org.example.gestiondeslieux.controller.api.UserApiController;
 import org.example.gestiondeslieux.exceptions.AlreadyExistsException;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.exceptions.UnauthorizedAccessException;
@@ -12,12 +13,16 @@ import org.example.gestiondeslieux.repository.UserRepository;
 import org.example.gestiondeslieux.request.ChangePasswordRequest;
 import org.example.gestiondeslieux.request.RegisterRequest;
 import org.example.gestiondeslieux.request.UpdateUserRequest;
+import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ModelMapper modelMapper;
 
     @Override
     @Transactional
@@ -57,16 +63,16 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public UserDto toDto(User user) {
-        UserDto dto = new UserDto();
-        dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
-        dto.setEmail(user.getEmail());
-        dto.setFirstName(user.getFirstName());
-        dto.setLastName(user.getLastName());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setActive(user.getActive());
+    @Transactional(readOnly = true)
+    public UserDto convertToDto(User user) {
+        UserDto dto = modelMapper.map(user, UserDto.class);
         dto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+        try {
+            dto.add(linkTo(methodOn(UserApiController.class).getMe(null)).withSelfRel());
+            dto.add(linkTo(methodOn(UserApiController.class).updateMe(null, null)).withRel("update"));
+            dto.add(linkTo(methodOn(UserApiController.class).changePassword(null, null)).withRel("changePassword"));
+        } catch (Exception ignored) {
+        }
         return dto;
     }
 

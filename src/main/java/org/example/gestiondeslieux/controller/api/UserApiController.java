@@ -5,9 +5,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.UserDto;
-import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.request.ChangePasswordRequest;
 import org.example.gestiondeslieux.request.UpdateUserRequest;
+import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.service.user.IUserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,18 +23,18 @@ public class UserApiController {
 
     @GetMapping("/me")
     @Operation(summary = "Profil courant")
-    public ResponseEntity<UserDto> getMe(Authentication auth) {
-        User user = userService.findByUsername((String) auth.getCredentials());
-        return ResponseEntity.ok(userService.toDto(user));
+    public ResponseEntity<ApiResponse<UserDto>> getMe(Authentication auth) {
+        UserDto user = userService.convertToDto(userService.findByUsername((String) auth.getCredentials()));
+        return ResponseEntity.ok(new ApiResponse<>("Profil récupéré avec succès", user));
     }
 
     @PutMapping("/me")
     @Operation(summary = "Mettre à jour le profil")
-    public ResponseEntity<UserDto> updateMe(@Valid @RequestBody UpdateUserRequest request,
-                                            Authentication auth) {
+    public ResponseEntity<ApiResponse<UserDto>> updateMe(@Valid @RequestBody UpdateUserRequest request,
+                                                         Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
-        User updated = userService.updateUser(userId, request);
-        return ResponseEntity.ok(userService.toDto(updated));
+        UserDto user = userService.convertToDto(userService.updateUser(userId, request));
+        return ResponseEntity.ok(new ApiResponse<>("Profil mis à jour avec succès", user));
     }
 
     @PutMapping("/me/password")

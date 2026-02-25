@@ -1,13 +1,16 @@
 package org.example.gestiondeslieux.dto;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.example.gestiondeslieux.enums.Permission;
 import org.example.gestiondeslieux.enums.ResourceType;
+import org.springframework.hateoas.RepresentationModel;
 
 import java.time.LocalDateTime;
 
 @Data
-public class AccessTokenDto {
+@EqualsAndHashCode(callSuper = false)
+public class AccessTokenDto extends RepresentationModel<AccessTokenDto> {
     private Long id;
     private String token;
     private ResourceType resourceType;

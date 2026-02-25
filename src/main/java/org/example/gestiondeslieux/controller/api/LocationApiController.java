@@ -9,14 +9,12 @@ import org.example.gestiondeslieux.dto.PublicLocationDto;
 import org.example.gestiondeslieux.dto.ShareLocationResponse;
 import org.example.gestiondeslieux.model.CurrentLocation;
 import org.example.gestiondeslieux.request.UpdateLocationRequest;
+import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.service.location.ICurrentLocationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequestMapping("/api/location")
@@ -31,30 +29,20 @@ public class LocationApiController {
 
     private Long userId(Authentication auth) { return (Long) auth.getPrincipal(); }
 
-    private CurrentLocationDto toDto(CurrentLocation loc) {
-        CurrentLocationDto dto = new CurrentLocationDto();
-        dto.setId(loc.getId());
-        dto.setLatitude(loc.getLatitude());
-        dto.setLongitude(loc.getLongitude());
-        dto.setAccuracy(loc.getAccuracy());
-        dto.setTimestamp(loc.getTimestamp());
-        dto.setIsShared(loc.getIsShared());
-        dto.setUpdatedAt(loc.getUpdatedAt());
-        return dto;
-    }
-
     @PostMapping("/update")
     @Operation(summary = "Mettre à jour la position courante")
-    public ResponseEntity<CurrentLocationDto> update(@Valid @RequestBody UpdateLocationRequest req,
-                                                     Authentication auth) {
+    public ResponseEntity<ApiResponse<CurrentLocationDto>> update(@Valid @RequestBody UpdateLocationRequest req,
+                                                                  Authentication auth) {
         CurrentLocation loc = locationService.updateLocation(req, userId(auth));
-        return ResponseEntity.ok(toDto(loc));
+        return ResponseEntity.ok(new ApiResponse<>("Position mise à jour avec succès",
+                locationService.convertToDto(loc)));
     }
 
     @GetMapping("/current")
     @Operation(summary = "Obtenir la position courante")
-    public ResponseEntity<CurrentLocationDto> getCurrent(Authentication auth) {
-        return ResponseEntity.ok(toDto(locationService.getCurrentLocation(userId(auth))));
+    public ResponseEntity<ApiResponse<CurrentLocationDto>> getCurrent(Authentication auth) {
+        CurrentLocationDto dto = locationService.convertToDto(locationService.getCurrentLocation(userId(auth)));
+        return ResponseEntity.ok(new ApiResponse<>("Position courante récupérée avec succès", dto));
     }
 
     @DeleteMapping("/current")
@@ -66,12 +54,12 @@ public class LocationApiController {
 
     @PostMapping("/share")
     @Operation(summary = "Démarrer le partage de position")
-    public ResponseEntity<ShareLocationResponse> startSharing(Authentication auth) {
+    public ResponseEntity<ApiResponse<ShareLocationResponse>> startSharing(Authentication auth) {
         CurrentLocation loc = locationService.startSharing(userId(auth));
         ShareLocationResponse res = new ShareLocationResponse();
         res.setToken(loc.getShareToken());
         res.setUrl(baseUrl + "/api/location/public/" + loc.getShareToken());
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(new ApiResponse<>("Partage de position activé", res));
     }
 
     @DeleteMapping("/share")
@@ -83,18 +71,11 @@ public class LocationApiController {
 
     @GetMapping("/public/{shareToken}")
     @Operation(summary = "Accès public à une position partagée")
-    public ResponseEntity<PublicLocationDto> getPublic(@PathVariable String shareToken) {
+    public ResponseEntity<ApiResponse<PublicLocationDto>> getPublic(@PathVariable String shareToken) {
         CurrentLocation loc = locationService.getSharedLocation(shareToken);
-        PublicLocationDto dto = new PublicLocationDto();
-        dto.setLatitude(loc.getLatitude());
-        dto.setLongitude(loc.getLongitude());
-        dto.setAccuracy(loc.getAccuracy());
-        dto.setTimestamp(loc.getTimestamp());
-        dto.setUpdatedAt(loc.getUpdatedAt());
-        dto.setAgeSeconds(loc.getUpdatedAt() != null
-                ? ChronoUnit.SECONDS.between(loc.getUpdatedAt(), LocalDateTime.now()) : null);
+        PublicLocationDto dto = locationService.convertToPublicDto(loc);
         return ResponseEntity.ok()
                 .header("Cache-Control", "public, max-age=15")
-                .body(dto);
+                .body(new ApiResponse<>("Position publique récupérée avec succès", dto));
     }
 }

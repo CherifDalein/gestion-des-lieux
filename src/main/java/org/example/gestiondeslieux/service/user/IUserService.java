@@ -9,7 +9,7 @@ import org.example.gestiondeslieux.request.UpdateUserRequest;
 public interface IUserService {
     User registerUser(RegisterRequest request);
     User findByUsername(String username);
-    UserDto toDto(User user);
+    UserDto convertToDto(User user);
     User updateUser(Long userId, UpdateUserRequest request);
     void changePassword(Long userId, ChangePasswordRequest request);
 }

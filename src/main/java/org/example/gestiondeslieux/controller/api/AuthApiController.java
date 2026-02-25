@@ -4,12 +4,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.gestiondeslieux.dto.JwtResponse;
 import org.example.gestiondeslieux.exceptions.TokenInvalidException;
+import org.example.gestiondeslieux.model.Role;
 import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.request.LoginRequest;
 import org.example.gestiondeslieux.request.RefreshTokenRequest;
 import org.example.gestiondeslieux.request.RegisterRequest;
+import org.example.gestiondeslieux.response.JwtResponse;
 import org.example.gestiondeslieux.security.JwtUtil;
 import org.example.gestiondeslieux.service.user.IUserService;
 import org.springframework.http.HttpStatus;
@@ -76,7 +77,7 @@ public class AuthApiController {
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
         response.setRoles(user.getRoles().stream()
-                .map(r -> r.getName()).collect(Collectors.toSet()));
+                .map(Role::getName).collect(Collectors.toSet()));
         return ResponseEntity.status(status).body(response);
     }
 }

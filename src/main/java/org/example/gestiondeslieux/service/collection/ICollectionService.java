@@ -1,5 +1,6 @@
 package org.example.gestiondeslieux.service.collection;
 
+import org.example.gestiondeslieux.dto.CollectionDto;
 import org.example.gestiondeslieux.model.Collection;
 import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.request.CreateCollectionRequest;
@@ -18,4 +19,5 @@ public interface ICollectionService {
     Page<Place> getPlacesInCollection(Long collectionId, Long userId, Pageable pageable);
     void syncCollectionsForUser(Long userId);
     Collection getOrCreateAllPlacesCollection(Long userId);
+    CollectionDto convertToDto(Collection collection);
 }

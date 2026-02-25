@@ -4,11 +4,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.ImportResultDto;
-import org.example.gestiondeslieux.dto.PlaceDto;
 import org.example.gestiondeslieux.enums.ExportFormat;
 import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.service.export.IExportService;
 import org.example.gestiondeslieux.service.place.IPlaceService;
+import org.example.gestiondeslieux.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -30,19 +30,9 @@ public class ImportApiController {
 
     private Long userId(Authentication auth) { return (Long) auth.getPrincipal(); }
 
-    private PlaceDto toDto(Place p) {
-        PlaceDto dto = new PlaceDto();
-        dto.setId(p.getId());
-        dto.setTitle(p.getTitle());
-        dto.setLatitude(p.getLatitude());
-        dto.setLongitude(p.getLongitude());
-        dto.setTags(p.getTags());
-        return dto;
-    }
-
     @PostMapping(consumes = "multipart/form-data")
     @Operation(summary = "Importer des lieux depuis un fichier")
-    public ResponseEntity<ImportResultDto> importFile(
+    public ResponseEntity<ApiResponse<ImportResultDto>> importFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String format,
             Authentication auth) throws IOException {
@@ -57,13 +47,13 @@ public class ImportApiController {
         result.setImported(imported.size());
         result.setSkipped(0);
         result.setErrors(List.of());
-        result.setPlaces(imported.stream().map(this::toDto).toList());
-        return ResponseEntity.ok(result);
+        result.setPlaces(imported.stream().map(placeService::convertToDto).toList());
+        return ResponseEntity.ok(new ApiResponse<>("Import fichier terminé avec succès", result));
     }
 
     @PostMapping(consumes = "application/json")
     @Operation(summary = "Importer des lieux depuis JSON avec contenu brut")
-    public ResponseEntity<ImportResultDto> importJson(
+    public ResponseEntity<ApiResponse<ImportResultDto>> importJson(
             @RequestBody org.example.gestiondeslieux.request.ImportRequest req,
             Authentication auth) {
 
@@ -85,7 +75,7 @@ public class ImportApiController {
         result.setImported(imported.size());
         result.setSkipped(0);
         result.setErrors(errors);
-        result.setPlaces(imported.stream().map(this::toDto).toList());
-        return ResponseEntity.ok(result);
+        result.setPlaces(imported.stream().map(placeService::convertToDto).toList());
+        return ResponseEntity.ok(new ApiResponse<>("Import JSON terminé avec succès", result));
     }
 }

@@ -1,6 +1,8 @@
 package org.example.gestiondeslieux.service.place;
 
 import org.example.gestiondeslieux.enums.ExportFormat;
+import org.example.gestiondeslieux.dto.PlaceDto;
+import org.example.gestiondeslieux.dto.PlaceWithDistanceDto;
 import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.request.CreatePlaceRequest;
 import org.example.gestiondeslieux.request.PlaceSearchRequest;
@@ -26,4 +28,6 @@ public interface IPlaceService {
     String exportCollection(Long collectionId, ExportFormat format, Long userId);
     String exportPlaceById(Long placeId, ExportFormat format, Long userId);
     List<Place> importPlaces(String content, ExportFormat format, Long userId);
+    PlaceDto convertToDto(Place place);
+    PlaceWithDistanceDto convertNearbyToDto(Object[] row);
 }

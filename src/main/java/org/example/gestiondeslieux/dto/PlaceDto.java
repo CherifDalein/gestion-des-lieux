@@ -1,11 +1,15 @@
 package org.example.gestiondeslieux.dto;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.springframework.hateoas.RepresentationModel;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class PlaceDto {
+@EqualsAndHashCode(callSuper = false)
+public class PlaceDto extends RepresentationModel<PlaceDto> {
     private Long id;
     private String title;
     private String description;

@@ -1,6 +1,8 @@
 package org.example.gestiondeslieux.service.collection;
 
 import lombok.RequiredArgsConstructor;
+import org.example.gestiondeslieux.controller.api.CollectionApiController;
+import org.example.gestiondeslieux.dto.CollectionDto;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.model.Collection;
 import org.example.gestiondeslieux.model.Place;
@@ -10,12 +12,17 @@ import org.example.gestiondeslieux.repository.PlaceRepository;
 import org.example.gestiondeslieux.repository.UserRepository;
 import org.example.gestiondeslieux.request.CreateCollectionRequest;
 import org.example.gestiondeslieux.request.UpdateCollectionRequest;
+import org.hibernate.Hibernate;
+import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,7 @@ public class CollectionService implements ICollectionService {
     private final CollectionRepository collectionRepository;
     private final PlaceRepository placeRepository;
     private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
 
     @Override
     @Transactional
@@ -126,5 +134,37 @@ public class CollectionService implements ICollectionService {
                             .build();
                     return collectionRepository.save(c);
                 });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CollectionDto convertToDto(Collection collection) {
+        Hibernate.initialize(collection.getUser());
+
+        CollectionDto dto = modelMapper.map(collection, CollectionDto.class);
+        dto.setUsername(collection.getUser().getUsername());
+        dto.setPlaceCount(getPlacesInCollection(collection.getId(), collection.getUser().getId(),
+                Pageable.ofSize(1)).getTotalElements());
+
+        try {
+            dto.add(linkTo(methodOn(CollectionApiController.class)
+                    .getCollection(collection.getId(), null, null, null))
+                    .withSelfRel());
+            dto.add(linkTo(methodOn(CollectionApiController.class)
+                    .getPlaces(collection.getId(), null, null, null))
+                    .withRel("places"));
+            dto.add(linkTo(methodOn(CollectionApiController.class)
+                    .updateCollection(collection.getId(), null, null))
+                    .withRel("update"));
+            dto.add(linkTo(methodOn(CollectionApiController.class)
+                    .deleteCollection(collection.getId(), null))
+                    .withRel("delete"));
+            dto.add(linkTo(methodOn(CollectionApiController.class)
+                    .shareCollection(collection.getId(), null, null))
+                    .withRel("share"));
+        } catch (Exception ignored) {
+        }
+
+        return dto;
     }
 }

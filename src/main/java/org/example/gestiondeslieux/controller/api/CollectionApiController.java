@@ -11,11 +11,13 @@ import org.example.gestiondeslieux.dto.ShareResponse;
 import org.example.gestiondeslieux.enums.ExportFormat;
 import org.example.gestiondeslieux.enums.Permission;
 import org.example.gestiondeslieux.enums.ResourceType;
+import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.model.Collection;
-import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.request.CreateCollectionRequest;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
 import org.example.gestiondeslieux.request.UpdateCollectionRequest;
+import org.example.gestiondeslieux.response.ApiResponse;
+import org.example.gestiondeslieux.security.TokenAuthentication;
 import org.example.gestiondeslieux.service.collection.ICollectionService;
 import org.example.gestiondeslieux.service.place.IPlaceService;
 import org.example.gestiondeslieux.service.token.IAccessTokenService;
@@ -48,75 +50,72 @@ public class CollectionApiController {
 
     private Long userId(Authentication auth) { return (Long) auth.getPrincipal(); }
 
-    private CollectionDto toDto(Collection c, Long userId) {
-        CollectionDto dto = new CollectionDto();
-        dto.setId(c.getId());
-        dto.setName(c.getName());
-        dto.setTagFilter(c.getTagFilter());
-        dto.setIsShared(c.getIsShared());
-        dto.setCreatedAt(c.getCreatedAt());
-        dto.setUsername(c.getUser().getUsername());
-        Page<Place> places = collectionService.getPlacesInCollection(c.getId(), userId,
-                org.springframework.data.domain.Pageable.ofSize(1));
-        dto.setPlaceCount(places.getTotalElements());
-        return dto;
+    private Long userIdOrNull(Authentication auth) {
+        return (auth != null && auth.getPrincipal() instanceof Long uid) ? uid : null;
     }
 
-    private PlaceDto placeToDto(Place p) {
-        PlaceDto dto = new PlaceDto();
-        dto.setId(p.getId());
-        dto.setTitle(p.getTitle());
-        dto.setDescription(p.getDescription());
-        dto.setLatitude(p.getLatitude());
-        dto.setLongitude(p.getLongitude());
-        dto.setImageUrl(p.getImageUrl());
-        dto.setTags(p.getTags());
-        dto.setCreatedAt(p.getCreatedAt());
-        dto.setUpdatedAt(p.getUpdatedAt());
-        if (p.getUser() != null) dto.setUsername(p.getUser().getUsername());
-        return dto;
+    private String resolveToken(Authentication auth, String tokenParam) {
+        if (tokenParam != null && !tokenParam.isBlank()) return tokenParam;
+        if (auth instanceof TokenAuthentication tokenAuth) {
+            return tokenAuth.getAccessToken().getToken();
+        }
+        if (auth != null && auth.getPrincipal() instanceof String principal) {
+            return principal;
+        }
+        return null;
+    }
+
+    private Long resolveCollectionOwnerId(Long collectionId, Authentication auth, String tokenParam) {
+        Long uid = userIdOrNull(auth);
+        if (uid != null) return uid;
+
+        String token = resolveToken(auth, tokenParam);
+        if (token == null || !accessTokenService.hasPermission(token, ResourceType.COLLECTION, collectionId, Permission.READ)) {
+            throw new ResourceNotFoundException("Collection", "id", collectionId);
+        }
+        return accessTokenService.validateAndGet(token).getCreatedBy().getId();
     }
 
     @GetMapping
     @Operation(summary = "Lister les collections")
-    public ResponseEntity<List<CollectionDto>> getCollections(Authentication auth) {
-        Long uid = userId(auth);
-        List<CollectionDto> list = collectionService.getCollectionsByUser(uid)
-                .stream().map(c -> toDto(c, uid)).toList();
-        return ResponseEntity.ok(list);
+    public ResponseEntity<ApiResponse<List<CollectionDto>>> getCollections(Authentication auth) {
+        List<CollectionDto> list = collectionService.getCollectionsByUser(userId(auth))
+                .stream().map(collectionService::convertToDto).toList();
+        return ResponseEntity.ok(new ApiResponse<>("Collections récupérées avec succès", list));
     }
 
     @PostMapping
     @Operation(summary = "Créer une collection")
-    public ResponseEntity<CollectionDto> createCollection(
+    public ResponseEntity<ApiResponse<CollectionDto>> createCollection(
             @Valid @RequestBody CreateCollectionRequest req, Authentication auth) {
-        Long uid = userId(auth);
-        Collection c = collectionService.createCollection(req, uid);
-        return ResponseEntity.status(201).body(toDto(c, uid));
+        Collection c = collectionService.createCollection(req, userId(auth));
+        return ResponseEntity.status(201)
+                .body(new ApiResponse<>("Collection créée avec succès", collectionService.convertToDto(c)));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtenir une collection")
-    public ResponseEntity<?> getCollection(@PathVariable Long id,
-                                           @RequestParam(required = false) String token,
-                                           Authentication auth,
-                                           HttpServletRequest request) {
-        Long uid = userId(auth);
+    public ResponseEntity<ApiResponse<CollectionDto>> getCollection(@PathVariable Long id,
+                                                                    @RequestParam(required = false) String token,
+                                                                    Authentication auth,
+                                                                    HttpServletRequest request) {
+        Long uid = resolveCollectionOwnerId(id, auth, token);
         Collection c = collectionService.getCollectionById(id, uid);
-        CollectionDto dto = toDto(c, uid);
-        return HttpCacheUtils.buildCachedResponse(dto, c.getCreatedAt(), request,
+        CollectionDto dto = collectionService.convertToDto(c);
+        ApiResponse<CollectionDto> body = new ApiResponse<>("Collection récupérée avec succès", dto);
+        return HttpCacheUtils.buildCachedResponse(body, c.getCreatedAt(), request,
                 "private, no-cache");
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une collection")
-    public ResponseEntity<CollectionDto> updateCollection(
+    public ResponseEntity<ApiResponse<CollectionDto>> updateCollection(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCollectionRequest req,
             Authentication auth) {
-        Long uid = userId(auth);
-        Collection c = collectionService.updateCollection(id, req, uid);
-        return ResponseEntity.ok(toDto(c, uid));
+        Collection c = collectionService.updateCollection(id, req, userId(auth));
+        return ResponseEntity.ok(new ApiResponse<>("Collection mise à jour avec succès",
+                collectionService.convertToDto(c)));
     }
 
     @DeleteMapping("/{id}")
@@ -128,14 +127,15 @@ public class CollectionApiController {
 
     @GetMapping("/{id}/places")
     @Operation(summary = "Lieux dans la collection")
-    public ResponseEntity<Page<PlaceDto>> getPlaces(
+    public ResponseEntity<ApiResponse<Page<PlaceDto>>> getPlaces(
             @PathVariable Long id,
             @RequestParam(required = false) String token,
             @PageableDefault(size = 20) Pageable pageable,
             Authentication auth) {
-        Page<PlaceDto> page = collectionService.getPlacesInCollection(id, userId(auth), pageable)
-                .map(this::placeToDto);
-        return ResponseEntity.ok(page);
+        Long uid = resolveCollectionOwnerId(id, auth, token);
+        Page<PlaceDto> page = collectionService.getPlacesInCollection(id, uid, pageable)
+                .map(placeService::convertToDto);
+        return ResponseEntity.ok(new ApiResponse<>("Lieux de la collection récupérés avec succès", page));
     }
 
     @GetMapping(value = "/{id}/export",
@@ -164,7 +164,7 @@ public class CollectionApiController {
 
     @PostMapping("/{id}/share")
     @Operation(summary = "Partager une collection via token")
-    public ResponseEntity<ShareResponse> shareCollection(
+    public ResponseEntity<ApiResponse<ShareResponse>> shareCollection(
             @PathVariable Long id,
             @RequestBody(required = false) CreateTokenRequest req,
             Authentication auth) {
@@ -181,7 +181,7 @@ public class CollectionApiController {
         sr.setResourceType(token.getResourceType());
         sr.setResourceId(token.getResourceId());
         sr.setExpiresAt(token.getExpiresAt());
-        return ResponseEntity.ok(sr);
+        return ResponseEntity.ok(new ApiResponse<>("Collection partagée avec succès", sr));
     }
 
     private ExportFormat resolveFormat(String param, String accept) {

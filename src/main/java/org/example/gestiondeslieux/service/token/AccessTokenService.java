@@ -1,6 +1,10 @@
 package org.example.gestiondeslieux.service.token;
 
 import lombok.RequiredArgsConstructor;
+import org.example.gestiondeslieux.controller.api.AccessTokenApiController;
+import org.example.gestiondeslieux.controller.api.CollectionApiController;
+import org.example.gestiondeslieux.controller.api.PlaceApiController;
+import org.example.gestiondeslieux.dto.AccessTokenDto;
 import org.example.gestiondeslieux.enums.Permission;
 import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
@@ -12,6 +16,8 @@ import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.repository.AccessTokenRepository;
 import org.example.gestiondeslieux.repository.UserRepository;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
+import org.hibernate.Hibernate;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +25,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 @Service
 @RequiredArgsConstructor
 public class AccessTokenService implements IAccessTokenService {
 
     private final AccessTokenRepository accessTokenRepository;
     private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
 
     @Override
     @Transactional
@@ -119,5 +129,32 @@ public class AccessTokenService implements IAccessTokenService {
     public AccessToken getTokenByValue(String tokenValue) {
         return accessTokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new ResourceNotFoundException("AccessToken", "token", tokenValue));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AccessTokenDto convertToDto(AccessToken token) {
+        Hibernate.initialize(token.getCreatedBy());
+
+        AccessTokenDto dto = modelMapper.map(token, AccessTokenDto.class);
+        dto.setIsValid(token.getRevokedAt() == null
+                && (token.getExpiresAt() == null || token.getExpiresAt().isAfter(LocalDateTime.now())));
+
+        try {
+            dto.add(linkTo(methodOn(AccessTokenApiController.class).getToken(token.getId(), null)).withSelfRel());
+            dto.add(linkTo(methodOn(AccessTokenApiController.class).revokeToken(token.getId(), null)).withRel("revoke"));
+            if (token.getResourceType() == ResourceType.PLACE) {
+                dto.add(linkTo(methodOn(PlaceApiController.class)
+                        .getPlace(token.getResourceId(), token.getToken(), null, null))
+                        .withRel("resource"));
+            } else if (token.getResourceType() == ResourceType.COLLECTION) {
+                dto.add(linkTo(methodOn(CollectionApiController.class)
+                        .getCollection(token.getResourceId(), token.getToken(), null, null))
+                        .withRel("resource"));
+            }
+        } catch (Exception ignored) {
+        }
+
+        return dto;
     }
 }

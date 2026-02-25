@@ -31,7 +31,7 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     Optional<LocalDateTime> findMaxUpdatedAtByUserId(@Param("userId") Long userId);
 
     @Query(value = """
-        SELECT p.*, (6371 * acos(
+        SELECT p.id, p.title, p.latitude, p.longitude, (6371 * acos(
             cos(radians(:lat)) * cos(radians(p.latitude))
             * cos(radians(p.longitude) - radians(:lon))
             + sin(radians(:lat)) * sin(radians(p.latitude))
@@ -45,7 +45,15 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
         )) <= :radiusKm
         ORDER BY distance_km ASC
         """,
-        countQuery = "SELECT count(*) FROM places p WHERE p.user_id = :userId",
+        countQuery = """
+            SELECT count(*) FROM places p
+            WHERE p.user_id = :userId
+            AND (6371 * acos(
+                cos(radians(:lat)) * cos(radians(p.latitude))
+                * cos(radians(p.longitude) - radians(:lon))
+                + sin(radians(:lat)) * sin(radians(p.latitude))
+            )) <= :radiusKm
+            """,
         nativeQuery = true)
     Page<Object[]> findNearby(@Param("lat") Double lat,
                                @Param("lon") Double lon,
