@@ -41,11 +41,10 @@ public class AuthApiController {
     @PostMapping("/login")
     @Operation(summary = "Se connecter")
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request) {
-        User user = userService.findByUsername(request.getUsername());
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        return buildJwtResponse(user, HttpStatus.OK);
+        return userService.findOptionalByEmail(request.getEmail())
+                .filter(user -> passwordEncoder.matches(request.getPassword(), user.getPassword()))
+                .map(user -> buildJwtResponse(user, HttpStatus.OK))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
     @PostMapping("/refresh")
@@ -55,8 +54,8 @@ public class AuthApiController {
         if (!jwtUtil.isTokenValid(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
             throw new TokenInvalidException(refreshToken);
         }
-        String username = jwtUtil.getUsernameFromToken(refreshToken);
-        User user = userService.findByUsername(username);
+        Long userId = jwtUtil.getUserIdFromToken(refreshToken);
+        User user = userService.findById(userId);
         return buildJwtResponse(user, HttpStatus.OK);
     }
 
@@ -67,14 +66,13 @@ public class AuthApiController {
     }
 
     private ResponseEntity<JwtResponse> buildJwtResponse(User user, HttpStatus status) {
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
         JwtResponse response = new JwtResponse();
         response.setAccessToken(accessToken);
         response.setRefreshToken(refreshToken);
         response.setTokenType("Bearer");
         response.setUserId(user.getId());
-        response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
         response.setRoles(user.getRoles().stream()
                 .map(Role::getName).collect(Collectors.toSet()));

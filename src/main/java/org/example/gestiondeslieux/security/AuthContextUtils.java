@@ -32,13 +32,4 @@ public final class AuthContextUtils {
         return null;
     }
 
-    public static String requireUsername(Authentication auth) {
-        if (auth != null
-                && auth.getPrincipal() instanceof Long
-                && auth.getCredentials() instanceof String username
-                && !username.isBlank()) {
-            return username;
-        }
-        throw new UnauthorizedAccessException("authentification utilisateur requise");
-    }
 }

@@ -26,9 +26,9 @@ public class JwtUtil {
         this.refreshExpirationMs = refreshExpirationMs;
     }
 
-    public String generateAccessToken(Long userId, String username) {
+    public String generateAccessToken(Long userId, String email) {
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(email)
                 .claim("userId", userId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
@@ -36,9 +36,9 @@ public class JwtUtil {
                 .compact();
     }
 
-    public String generateRefreshToken(Long userId, String username) {
+    public String generateRefreshToken(Long userId, String email) {
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(email)
                 .claim("userId", userId)
                 .claim("refresh", true)
                 .setIssuedAt(new Date())
@@ -55,7 +55,7 @@ public class JwtUtil {
                 .getBody();
     }
 
-    public String getUsernameFromToken(String token) {
+    public String getEmailFromToken(String token) {
         return parseClaims(token).getSubject();
     }
 

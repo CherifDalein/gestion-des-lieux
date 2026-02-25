@@ -261,7 +261,7 @@ public class PlaceService implements IPlaceService {
 
         PlaceDto dto = modelMapper.map(place, PlaceDto.class);
         if (place.getUser() != null) {
-            dto.setUsername(place.getUser().getUsername());
+            dto.setEmail(place.getUser().getEmail());
         }
 
         try {

@@ -6,9 +6,13 @@ import org.example.gestiondeslieux.request.ChangePasswordRequest;
 import org.example.gestiondeslieux.request.RegisterRequest;
 import org.example.gestiondeslieux.request.UpdateUserRequest;
 
+import java.util.Optional;
+
 public interface IUserService {
     User registerUser(RegisterRequest request);
-    User findByUsername(String username);
+    Optional<User> findOptionalByEmail(String email);
+    User findByEmail(String email);
+    User findById(Long userId);
     UserDto convertToDto(User user);
     User updateUser(Long userId, UpdateUserRequest request);
     void changePassword(Long userId, ChangePasswordRequest request);

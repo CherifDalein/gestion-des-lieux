@@ -48,7 +48,7 @@ class ApiEndpointsSmokeTest {
     @Test
     void should_cover_all_api_endpoints_without_server_errors() throws Exception {
         JsonNode login = postJson("/api/auth/login", """
-                {"username":"alice","password":"password123"}
+                {"email":"alice@test.com","password":"password123"}
                 """, status().isOk());
         String accessToken = requireTextField(login, "accessToken");
         String refreshToken = requireTextField(login, "refreshToken");
@@ -61,8 +61,8 @@ class ApiEndpointsSmokeTest {
 
         String random = UUID.randomUUID().toString().substring(0, 8);
         JsonNode register = postJson("/api/auth/register", """
-                {"username":"smoke-%s","email":"smoke-%s@test.com","password":"password123","firstName":"Smoke","lastName":"Test"}
-                """.formatted(random, random), status().isCreated());
+                {"email":"smoke-%s@test.com","password":"password123","confirmPassword":"password123","firstName":"Smoke","lastName":"Test"}
+                """.formatted(random), status().isCreated());
         String smokeAccessToken = requireTextField(register, "accessToken");
 
         mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + accessToken))

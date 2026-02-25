@@ -25,7 +25,7 @@ public class UserApiController {
     @GetMapping("/me")
     @Operation(summary = "Profil courant")
     public ResponseEntity<ApiResponse<UserDto>> getMe(Authentication auth) {
-        UserDto user = userService.convertToDto(userService.findByUsername(AuthContextUtils.requireUsername(auth)));
+        UserDto user = userService.convertToDto(userService.findById(AuthContextUtils.requireUserId(auth)));
         return ResponseEntity.ok(new ApiResponse<>("Profil récupéré avec succès", user));
     }
 

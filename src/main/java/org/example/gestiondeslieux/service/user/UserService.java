@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,17 +37,14 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     public User registerUser(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new AlreadyExistsException("User", "username", request.getUsername());
-        }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new AlreadyExistsException("User", "email", request.getEmail());
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new AlreadyExistsException("User", "email", normalizedEmail);
         }
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseGet(() -> roleRepository.save(new Role("ROLE_USER")));
         User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -57,9 +55,25 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User findByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+    @Transactional(readOnly = true)
+    public Optional<User> findOptionalByEmail(String email) {
+        if (email == null) {
+            return Optional.empty();
+        }
+        return userRepository.findByEmail(email.trim().toLowerCase());
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        String normalizedEmail = email == null ? null : email.trim().toLowerCase();
+        return userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", normalizedEmail));
+    }
+
+    @Override
+    public User findById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }
 
     @Override
@@ -84,11 +98,12 @@ public class UserService implements IUserService {
         if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
         if (request.getLastName() != null) user.setLastName(request.getLastName());
         if (request.getEmail() != null) {
-            if (!request.getEmail().equals(user.getEmail()) &&
-                    userRepository.existsByEmail(request.getEmail())) {
-                throw new AlreadyExistsException("User", "email", request.getEmail());
+            String normalizedEmail = request.getEmail().trim().toLowerCase();
+            if (!normalizedEmail.equals(user.getEmail()) &&
+                    userRepository.existsByEmail(normalizedEmail)) {
+                throw new AlreadyExistsException("User", "email", normalizedEmail);
             }
-            user.setEmail(request.getEmail());
+            user.setEmail(normalizedEmail);
         }
         return userRepository.save(user);
     }

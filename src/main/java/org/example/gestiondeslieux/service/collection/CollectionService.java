@@ -142,7 +142,7 @@ public class CollectionService implements ICollectionService {
         Hibernate.initialize(collection.getUser());
 
         CollectionDto dto = modelMapper.map(collection, CollectionDto.class);
-        dto.setUsername(collection.getUser().getUsername());
+        dto.setEmail(collection.getUser().getEmail());
         dto.setPlaceCount(getPlacesInCollection(collection.getId(), collection.getUser().getId(),
                 Pageable.ofSize(1)).getTotalElements());
 

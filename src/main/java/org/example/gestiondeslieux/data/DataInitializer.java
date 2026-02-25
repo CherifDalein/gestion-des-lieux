@@ -39,19 +39,19 @@ public class DataInitializer implements CommandLineRunner {
 
         // --- Users ---
         User alice = userRepository.save(User.builder()
-                .username("alice").email("alice@test.com")
+                .email("alice@test.com")
                 .password(passwordEncoder.encode("password123"))
                 .firstName("Alice").lastName("Dupont")
                 .active(true).roles(Set.of(roleUser)).build());
 
         User bob = userRepository.save(User.builder()
-                .username("bob").email("bob@test.com")
+                .email("bob@test.com")
                 .password(passwordEncoder.encode("password123"))
                 .firstName("Bob").lastName("Martin")
                 .active(true).roles(Set.of(roleUser)).build());
 
         userRepository.save(User.builder()
-                .username("admin").email("admin@test.com")
+                .email("admin@test.com")
                 .password(passwordEncoder.encode("admin123"))
                 .firstName("Admin").lastName("System")
                 .active(true).roles(Set.of(roleUser, roleAdmin)).build());
