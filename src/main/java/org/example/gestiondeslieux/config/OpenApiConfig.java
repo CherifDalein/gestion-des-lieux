@@ -18,9 +18,8 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(new Info().title("Gestion des lieux API").version("1.0")
-                        .description("API REST pour la gestion des lieux avec authentification JWT").license(new License()))
-
-
+                        .description("API REST pour la gestion des lieux avec authentification JWT")
+                        .license(new License().name("MIT License")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components().addSecuritySchemes(securitySchemeName, new SecurityScheme()
                         .name(securitySchemeName).type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")));

@@ -14,6 +14,9 @@ import org.example.gestiondeslieux.exceptions.UnauthorizedAccessException;
 import org.example.gestiondeslieux.model.AccessToken;
 import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.repository.AccessTokenRepository;
+import org.example.gestiondeslieux.repository.CollectionRepository;
+import org.example.gestiondeslieux.repository.CurrentLocationRepository;
+import org.example.gestiondeslieux.repository.PlaceRepository;
 import org.example.gestiondeslieux.repository.UserRepository;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
 import org.hibernate.Hibernate;
@@ -34,6 +37,9 @@ public class AccessTokenService implements IAccessTokenService {
 
     private final AccessTokenRepository accessTokenRepository;
     private final UserRepository userRepository;
+    private final PlaceRepository placeRepository;
+    private final CollectionRepository collectionRepository;
+    private final CurrentLocationRepository currentLocationRepository;
     private final ModelMapper modelMapper;
 
     @Override
@@ -41,6 +47,7 @@ public class AccessTokenService implements IAccessTokenService {
     public AccessToken createToken(CreateTokenRequest request, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        ensureResourceOwnership(request.getResourceType(), request.getResourceId(), userId);
         AccessToken token = AccessToken.builder()
                 .token(UUID.randomUUID().toString())
                 .resourceType(request.getResourceType())
@@ -110,6 +117,7 @@ public class AccessTokenService implements IAccessTokenService {
             if (token.getResourceType() != type) return false;
             if (!token.getResourceId().equals(resourceId)) return false;
             if (required == Permission.WRITE && token.getPermission() == Permission.READ) return false;
+            if (!isResourceOwnedByUser(type, resourceId, token.getCreatedBy().getId())) return false;
             return true;
         } catch (Exception e) {
             return false;
@@ -156,5 +164,19 @@ public class AccessTokenService implements IAccessTokenService {
         }
 
         return dto;
+    }
+
+    private void ensureResourceOwnership(ResourceType type, Long resourceId, Long userId) {
+        if (!isResourceOwnedByUser(type, resourceId, userId)) {
+            throw new ResourceNotFoundException(type.name(), "id", resourceId);
+        }
+    }
+
+    private boolean isResourceOwnedByUser(ResourceType type, Long resourceId, Long userId) {
+        return switch (type) {
+            case PLACE -> placeRepository.existsByIdAndUserId(resourceId, userId);
+            case COLLECTION -> collectionRepository.existsByIdAndUserId(resourceId, userId);
+            case CURRENT_LOCATION -> currentLocationRepository.existsByIdAndUserId(resourceId, userId);
+        };
     }
 }

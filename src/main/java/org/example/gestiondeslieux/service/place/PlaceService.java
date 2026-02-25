@@ -117,7 +117,6 @@ public class PlaceService implements IPlaceService {
         if (userId != null && place.getUser().getId().equals(userId)) return place;
         if (accessToken != null && accessTokenService.hasPermission(
                 accessToken, ResourceType.PLACE, id, Permission.READ)) {
-            accessTokenService.incrementAccessCount(accessToken);
             return place;
         }
         throw new ResourceNotFoundException("Place", "id", id);
@@ -231,7 +230,7 @@ public class PlaceService implements IPlaceService {
             if (place.getImageUrl() != null && !place.getImageUrl().isBlank()) {
                 Long imageId = extractImageId(place.getImageUrl());
                 if (imageId != null) {
-                    dto.add(linkTo(methodOn(ImageApiController.class).getImage(imageId)).withRel("image"));
+                    dto.add(linkTo(methodOn(ImageApiController.class).getImage(imageId, null, null)).withRel("image"));
                 }
             }
         } catch (Exception ignored) {

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CollectionRepository extends JpaRepository<Collection, Long> {
+    boolean existsByIdAndUserId(Long id, Long userId);
     List<Collection> findByUserId(Long userId);
     Optional<Collection> findByUserIdAndTagFilterIsNull(Long userId);
     Optional<Collection> findByUserIdAndTagFilter(Long userId, String tagFilter);

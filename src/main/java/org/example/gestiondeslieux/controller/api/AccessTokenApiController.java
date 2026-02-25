@@ -9,6 +9,7 @@ import org.example.gestiondeslieux.dto.DiscoverResponse;
 import org.example.gestiondeslieux.model.AccessToken;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
+import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.token.IAccessTokenService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -29,13 +30,11 @@ public class AccessTokenApiController {
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    private Long userId(Authentication auth) { return (Long) auth.getPrincipal(); }
-
     @PostMapping
     @Operation(summary = "Créer un token de partage")
     public ResponseEntity<ApiResponse<AccessTokenDto>> createToken(@Valid @RequestBody CreateTokenRequest req,
                                                                    Authentication auth) {
-        AccessToken token = accessTokenService.createToken(req, userId(auth));
+        AccessToken token = accessTokenService.createToken(req, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.status(201)
                 .body(new ApiResponse<>("Token créé avec succès", accessTokenService.convertToDto(token)));
     }
@@ -43,7 +42,7 @@ public class AccessTokenApiController {
     @GetMapping
     @Operation(summary = "Lister mes tokens")
     public ResponseEntity<ApiResponse<List<AccessTokenDto>>> getTokens(Authentication auth) {
-        List<AccessTokenDto> list = accessTokenService.getTokensByUser(userId(auth))
+        List<AccessTokenDto> list = accessTokenService.getTokensByUser(AuthContextUtils.requireUserId(auth))
                 .stream().map(accessTokenService::convertToDto).toList();
         return ResponseEntity.ok(new ApiResponse<>("Tokens récupérés avec succès", list));
     }
@@ -51,14 +50,15 @@ public class AccessTokenApiController {
     @GetMapping("/{id}")
     @Operation(summary = "Obtenir un token")
     public ResponseEntity<ApiResponse<AccessTokenDto>> getToken(@PathVariable Long id, Authentication auth) {
-        AccessTokenDto dto = accessTokenService.convertToDto(accessTokenService.getTokenById(id, userId(auth)));
+        AccessTokenDto dto = accessTokenService.convertToDto(
+                accessTokenService.getTokenById(id, AuthContextUtils.requireUserId(auth)));
         return ResponseEntity.ok(new ApiResponse<>("Token récupéré avec succès", dto));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Révoquer un token")
     public ResponseEntity<Void> revokeToken(@PathVariable Long id, Authentication auth) {
-        accessTokenService.revokeToken(id, userId(auth));
+        accessTokenService.revokeToken(id, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.noContent().build();
     }
 
@@ -68,7 +68,7 @@ public class AccessTokenApiController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             Authentication auth) {
-        AccessToken token = accessTokenService.getTokenById(id, userId(auth));
+        AccessToken token = accessTokenService.getTokenById(id, AuthContextUtils.requireUserId(auth));
         if (body.containsKey("expiresAt")) {
             token.setExpiresAt(java.time.LocalDateTime.parse(body.get("expiresAt")));
         }

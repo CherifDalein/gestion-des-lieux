@@ -11,7 +11,7 @@ import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.request.CreatePlaceRequest;
 import org.example.gestiondeslieux.request.UpdatePlaceRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
-import org.example.gestiondeslieux.security.TokenAuthentication;
+import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.image.IPlaceImageService;
 import org.example.gestiondeslieux.service.place.IPlaceService;
 import org.example.gestiondeslieux.util.HttpCacheUtils;
@@ -36,33 +36,15 @@ public class PlaceApiController {
     private final IPlaceService placeService;
     private final IPlaceImageService placeImageService;
 
-    private Long userId(Authentication auth) {
-        return (Long) auth.getPrincipal();
-    }
-
-    private Long userIdOrNull(Authentication auth) {
-        return (auth != null && auth.getPrincipal() instanceof Long uid) ? uid : null;
-    }
-
-    private String resolveToken(Authentication auth, String tokenParam) {
-        if (tokenParam != null && !tokenParam.isBlank()) return tokenParam;
-        if (auth instanceof TokenAuthentication tokenAuth) {
-            return tokenAuth.getAccessToken().getToken();
-        }
-        if (auth != null && auth.getPrincipal() instanceof String principal) {
-            return principal;
-        }
-        return null;
-    }
-
     @GetMapping
     @Operation(summary = "Lister les lieux de l'utilisateur")
     public ResponseEntity<ApiResponse<Page<PlaceDto>>> getPlaces(Authentication auth,
                                                                  @PageableDefault(size = 20) Pageable pageable,
                                                                  HttpServletRequest request) {
-        Page<PlaceDto> page = placeService.getPlacesByUser(userId(auth), pageable)
+        Long userId = AuthContextUtils.requireUserId(auth);
+        Page<PlaceDto> page = placeService.getPlacesByUser(userId, pageable)
                 .map(placeService::convertToDto);
-        Optional<LocalDateTime> lastMod = placeService.getAllTagsByUser(userId(auth)).isEmpty()
+        Optional<LocalDateTime> lastMod = placeService.getAllTagsByUser(userId).isEmpty()
                 ? Optional.empty()
                 : Optional.ofNullable(page.getContent().isEmpty() ? null
                     : page.getContent().stream()
@@ -78,7 +60,7 @@ public class PlaceApiController {
     @Operation(summary = "Créer un lieu")
     public ResponseEntity<ApiResponse<PlaceDto>> createPlace(@Valid @RequestBody CreatePlaceRequest req,
                                                              Authentication auth) {
-        Place p = placeService.createPlace(req, userId(auth));
+        Place p = placeService.createPlace(req, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.status(201)
                 .body(new ApiResponse<>("Lieu créé avec succès", placeService.convertToDto(p)));
     }
@@ -89,8 +71,8 @@ public class PlaceApiController {
                                                           @RequestParam(required = false) String token,
                                                           Authentication auth,
                                                           HttpServletRequest request) {
-        Long uid = userIdOrNull(auth);
-        Place p = placeService.getPlaceByIdWithToken(id, uid, resolveToken(auth, token));
+        Long uid = AuthContextUtils.userIdOrNull(auth);
+        Place p = placeService.getPlaceByIdWithToken(id, uid, AuthContextUtils.resolveToken(auth, token));
         PlaceDto dto = placeService.convertToDto(p);
         ApiResponse<PlaceDto> body = new ApiResponse<>("Lieu récupéré avec succès", dto);
         return HttpCacheUtils.buildCachedResponse(body, p.getUpdatedAt(), request,
@@ -102,14 +84,14 @@ public class PlaceApiController {
     public ResponseEntity<ApiResponse<PlaceDto>> updatePlace(@PathVariable Long id,
                                                              @Valid @RequestBody UpdatePlaceRequest req,
                                                              Authentication auth) {
-        Place p = placeService.updatePlace(id, req, userId(auth));
+        Place p = placeService.updatePlace(id, req, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.ok(new ApiResponse<>("Lieu mis à jour avec succès", placeService.convertToDto(p)));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un lieu")
     public ResponseEntity<Void> deletePlace(@PathVariable Long id, Authentication auth) {
-        placeService.deletePlace(id, userId(auth));
+        placeService.deletePlace(id, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.noContent().build();
     }
 
@@ -123,10 +105,11 @@ public class PlaceApiController {
             @RequestParam(required = false, defaultValue = "5.0") Double radius,
             @PageableDefault(size = 20) Pageable pageable,
             Authentication auth) {
+        Long userId = AuthContextUtils.requireUserId(auth);
         org.example.gestiondeslieux.request.PlaceSearchRequest req =
                 new org.example.gestiondeslieux.request.PlaceSearchRequest();
         req.setQ(q); req.setTag(tag); req.setLat(lat); req.setLon(lon); req.setRadiusKm(radius);
-        Page<PlaceDto> page = placeService.searchPlaces(req, userId(auth), pageable)
+        Page<PlaceDto> page = placeService.searchPlaces(req, userId, pageable)
                 .map(placeService::convertToDto);
         return ResponseEntity.ok(new ApiResponse<>("Recherche effectuée avec succès", page));
     }
@@ -140,7 +123,7 @@ public class PlaceApiController {
             @RequestParam(required = false) String tag,
             @PageableDefault(size = 20) Pageable pageable,
             Authentication auth) {
-        Page<Object[]> raw = placeService.searchNearby(lat, lon, radius, userId(auth), pageable);
+        Page<Object[]> raw = placeService.searchNearby(lat, lon, radius, AuthContextUtils.requireUserId(auth), pageable);
         Page<PlaceWithDistanceDto> page = raw.map(placeService::convertNearbyToDto);
         return ResponseEntity.ok(new ApiResponse<>("Lieux proches récupérés avec succès", page));
     }
@@ -149,7 +132,7 @@ public class PlaceApiController {
     @Operation(summary = "Tous les tags de l'utilisateur")
     public ResponseEntity<ApiResponse<List<String>>> getTags(Authentication auth) {
         return ResponseEntity.ok(new ApiResponse<>("Tags récupérés avec succès",
-                placeService.getAllTagsByUser(userId(auth))));
+                placeService.getAllTagsByUser(AuthContextUtils.requireUserId(auth))));
     }
 
     @PostMapping("/{id}/tags/{tag}")
@@ -157,9 +140,10 @@ public class PlaceApiController {
     public ResponseEntity<ApiResponse<PlaceDto>> addTag(@PathVariable Long id,
                                                         @PathVariable String tag,
                                                         Authentication auth) {
-        placeService.addTagToPlace(id, tag, userId(auth));
+        Long userId = AuthContextUtils.requireUserId(auth);
+        placeService.addTagToPlace(id, tag, userId);
         return ResponseEntity.ok(new ApiResponse<>("Tag ajouté avec succès",
-                placeService.convertToDto(placeService.getPlaceById(id, userId(auth)))));
+                placeService.convertToDto(placeService.getPlaceById(id, userId))));
     }
 
     @DeleteMapping("/{id}/tags/{tag}")
@@ -167,9 +151,10 @@ public class PlaceApiController {
     public ResponseEntity<ApiResponse<PlaceDto>> removeTag(@PathVariable Long id,
                                                            @PathVariable String tag,
                                                            Authentication auth) {
-        placeService.removeTagFromPlace(id, tag, userId(auth));
+        Long userId = AuthContextUtils.requireUserId(auth);
+        placeService.removeTagFromPlace(id, tag, userId);
         return ResponseEntity.ok(new ApiResponse<>("Tag retiré avec succès",
-                placeService.convertToDto(placeService.getPlaceById(id, userId(auth)))));
+                placeService.convertToDto(placeService.getPlaceById(id, userId))));
     }
 
     @PostMapping("/{id}/image")
@@ -177,16 +162,16 @@ public class PlaceApiController {
     public ResponseEntity<ApiResponse<PlaceDto>> uploadImage(@PathVariable Long id,
                                                              @RequestParam("file") MultipartFile file,
                                                              Authentication auth) {
-        placeImageService.uploadImage(file, id, userId(auth));
+        Long userId = AuthContextUtils.requireUserId(auth);
+        placeImageService.uploadImage(file, id, userId);
         return ResponseEntity.ok(new ApiResponse<>("Image uploadée avec succès",
-                placeService.convertToDto(placeService.getPlaceById(id, userId(auth)))));
+                placeService.convertToDto(placeService.getPlaceById(id, userId))));
     }
 
     @DeleteMapping("/{id}/image")
     @Operation(summary = "Supprimer l'image principale")
     public ResponseEntity<ApiResponse<PlaceDto>> deleteImage(@PathVariable Long id, Authentication auth) {
-        Place p = placeService.getPlaceById(id, userId(auth));
-        p.setImageUrl(null);
+        Place p = placeImageService.deleteMainImage(id, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.ok(new ApiResponse<>("Image supprimée avec succès", placeService.convertToDto(p)));
     }
 }

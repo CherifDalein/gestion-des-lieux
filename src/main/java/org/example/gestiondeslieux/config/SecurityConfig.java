@@ -20,10 +20,14 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final IAccessTokenService accessTokenService;
+    private final RateLimitConfig.RateLimitFilter rateLimitFilter;
 
-    public SecurityConfig(JwtUtil jwtUtil, IAccessTokenService accessTokenService) {
+    public SecurityConfig(JwtUtil jwtUtil,
+                          IAccessTokenService accessTokenService,
+                          RateLimitConfig.RateLimitFilter rateLimitFilter) {
         this.jwtUtil = jwtUtil;
         this.accessTokenService = accessTokenService;
+        this.rateLimitFilter = rateLimitFilter;
     }
 
     @Bean
@@ -39,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/tokens/discover").permitAll()
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwtUtil),
                 UsernamePasswordAuthenticationFilter.class)

@@ -10,6 +10,7 @@ import org.example.gestiondeslieux.dto.ShareLocationResponse;
 import org.example.gestiondeslieux.model.CurrentLocation;
 import org.example.gestiondeslieux.request.UpdateLocationRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
+import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.location.ICurrentLocationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -27,13 +28,11 @@ public class LocationApiController {
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    private Long userId(Authentication auth) { return (Long) auth.getPrincipal(); }
-
     @PostMapping("/update")
     @Operation(summary = "Mettre à jour la position courante")
     public ResponseEntity<ApiResponse<CurrentLocationDto>> update(@Valid @RequestBody UpdateLocationRequest req,
                                                                   Authentication auth) {
-        CurrentLocation loc = locationService.updateLocation(req, userId(auth));
+        CurrentLocation loc = locationService.updateLocation(req, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.ok(new ApiResponse<>("Position mise à jour avec succès",
                 locationService.convertToDto(loc)));
     }
@@ -41,21 +40,22 @@ public class LocationApiController {
     @GetMapping("/current")
     @Operation(summary = "Obtenir la position courante")
     public ResponseEntity<ApiResponse<CurrentLocationDto>> getCurrent(Authentication auth) {
-        CurrentLocationDto dto = locationService.convertToDto(locationService.getCurrentLocation(userId(auth)));
+        CurrentLocationDto dto = locationService.convertToDto(
+                locationService.getCurrentLocation(AuthContextUtils.requireUserId(auth)));
         return ResponseEntity.ok(new ApiResponse<>("Position courante récupérée avec succès", dto));
     }
 
     @DeleteMapping("/current")
     @Operation(summary = "Supprimer la position courante")
     public ResponseEntity<Void> deleteCurrent(Authentication auth) {
-        locationService.deleteLocation(userId(auth));
+        locationService.deleteLocation(AuthContextUtils.requireUserId(auth));
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/share")
     @Operation(summary = "Démarrer le partage de position")
     public ResponseEntity<ApiResponse<ShareLocationResponse>> startSharing(Authentication auth) {
-        CurrentLocation loc = locationService.startSharing(userId(auth));
+        CurrentLocation loc = locationService.startSharing(AuthContextUtils.requireUserId(auth));
         ShareLocationResponse res = new ShareLocationResponse();
         res.setToken(loc.getShareToken());
         res.setUrl(baseUrl + "/api/location/public/" + loc.getShareToken());
@@ -65,7 +65,7 @@ public class LocationApiController {
     @DeleteMapping("/share")
     @Operation(summary = "Arrêter le partage de position")
     public ResponseEntity<Void> stopSharing(Authentication auth) {
-        locationService.stopSharing(userId(auth));
+        locationService.stopSharing(AuthContextUtils.requireUserId(auth));
         return ResponseEntity.noContent().build();
     }
 

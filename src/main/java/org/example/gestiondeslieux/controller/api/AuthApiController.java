@@ -52,7 +52,7 @@ public class AuthApiController {
     @Operation(summary = "Rafraîchir le token")
     public ResponseEntity<JwtResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
-        if (!jwtUtil.isTokenValid(refreshToken)) {
+        if (!jwtUtil.isTokenValid(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
             throw new TokenInvalidException(refreshToken);
         }
         String username = jwtUtil.getUsernameFromToken(refreshToken);

@@ -17,7 +17,7 @@ import org.example.gestiondeslieux.request.CreateCollectionRequest;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
 import org.example.gestiondeslieux.request.UpdateCollectionRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
-import org.example.gestiondeslieux.security.TokenAuthentication;
+import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.collection.ICollectionService;
 import org.example.gestiondeslieux.service.place.IPlaceService;
 import org.example.gestiondeslieux.service.token.IAccessTokenService;
@@ -48,28 +48,11 @@ public class CollectionApiController {
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    private Long userId(Authentication auth) { return (Long) auth.getPrincipal(); }
-
-    private Long userIdOrNull(Authentication auth) {
-        return (auth != null && auth.getPrincipal() instanceof Long uid) ? uid : null;
-    }
-
-    private String resolveToken(Authentication auth, String tokenParam) {
-        if (tokenParam != null && !tokenParam.isBlank()) return tokenParam;
-        if (auth instanceof TokenAuthentication tokenAuth) {
-            return tokenAuth.getAccessToken().getToken();
-        }
-        if (auth != null && auth.getPrincipal() instanceof String principal) {
-            return principal;
-        }
-        return null;
-    }
-
     private Long resolveCollectionOwnerId(Long collectionId, Authentication auth, String tokenParam) {
-        Long uid = userIdOrNull(auth);
+        Long uid = AuthContextUtils.userIdOrNull(auth);
         if (uid != null) return uid;
 
-        String token = resolveToken(auth, tokenParam);
+        String token = AuthContextUtils.resolveToken(auth, tokenParam);
         if (token == null || !accessTokenService.hasPermission(token, ResourceType.COLLECTION, collectionId, Permission.READ)) {
             throw new ResourceNotFoundException("Collection", "id", collectionId);
         }
@@ -79,7 +62,7 @@ public class CollectionApiController {
     @GetMapping
     @Operation(summary = "Lister les collections")
     public ResponseEntity<ApiResponse<List<CollectionDto>>> getCollections(Authentication auth) {
-        List<CollectionDto> list = collectionService.getCollectionsByUser(userId(auth))
+        List<CollectionDto> list = collectionService.getCollectionsByUser(AuthContextUtils.requireUserId(auth))
                 .stream().map(collectionService::convertToDto).toList();
         return ResponseEntity.ok(new ApiResponse<>("Collections récupérées avec succès", list));
     }
@@ -88,7 +71,7 @@ public class CollectionApiController {
     @Operation(summary = "Créer une collection")
     public ResponseEntity<ApiResponse<CollectionDto>> createCollection(
             @Valid @RequestBody CreateCollectionRequest req, Authentication auth) {
-        Collection c = collectionService.createCollection(req, userId(auth));
+        Collection c = collectionService.createCollection(req, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.status(201)
                 .body(new ApiResponse<>("Collection créée avec succès", collectionService.convertToDto(c)));
     }
@@ -113,7 +96,7 @@ public class CollectionApiController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCollectionRequest req,
             Authentication auth) {
-        Collection c = collectionService.updateCollection(id, req, userId(auth));
+        Collection c = collectionService.updateCollection(id, req, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.ok(new ApiResponse<>("Collection mise à jour avec succès",
                 collectionService.convertToDto(c)));
     }
@@ -121,7 +104,7 @@ public class CollectionApiController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une collection")
     public ResponseEntity<Void> deleteCollection(@PathVariable Long id, Authentication auth) {
-        collectionService.deleteCollection(id, userId(auth));
+        collectionService.deleteCollection(id, AuthContextUtils.requireUserId(auth));
         return ResponseEntity.noContent().build();
     }
 
@@ -149,10 +132,11 @@ public class CollectionApiController {
             @RequestParam(required = false) String format,
             @RequestHeader(value = "Accept", defaultValue = GeoMediaTypes.GEOJSON_VALUE) String accept,
             Authentication auth) {
+        Long userId = AuthContextUtils.requireUserId(auth);
         ExportFormat fmt = resolveFormat(format, accept);
-        String content = placeService.exportCollection(id, fmt, userId(auth));
+        String content = placeService.exportCollection(id, fmt, userId);
         String mediaType = toMediaType(fmt);
-        String name = collectionService.getCollectionById(id, userId(auth)).getName();
+        String name = collectionService.getCollectionById(id, userId).getName();
         String ext = fmt.name().toLowerCase();
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, mediaType)
@@ -168,7 +152,7 @@ public class CollectionApiController {
             @PathVariable Long id,
             @RequestBody(required = false) CreateTokenRequest req,
             Authentication auth) {
-        Long uid = userId(auth);
+        Long uid = AuthContextUtils.requireUserId(auth);
         if (req == null) req = new CreateTokenRequest();
         req.setResourceType(ResourceType.COLLECTION);
         req.setResourceId(id);

@@ -71,4 +71,13 @@ public class JwtUtil {
             return false;
         }
     }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            Object refreshClaim = parseClaims(token).get("refresh");
+            return Boolean.TRUE.equals(refreshClaim);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

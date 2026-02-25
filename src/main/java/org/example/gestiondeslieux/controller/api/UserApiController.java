@@ -8,6 +8,7 @@ import org.example.gestiondeslieux.dto.UserDto;
 import org.example.gestiondeslieux.request.ChangePasswordRequest;
 import org.example.gestiondeslieux.request.UpdateUserRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
+import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.user.IUserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,7 +25,7 @@ public class UserApiController {
     @GetMapping("/me")
     @Operation(summary = "Profil courant")
     public ResponseEntity<ApiResponse<UserDto>> getMe(Authentication auth) {
-        UserDto user = userService.convertToDto(userService.findByUsername((String) auth.getCredentials()));
+        UserDto user = userService.convertToDto(userService.findByUsername(AuthContextUtils.requireUsername(auth)));
         return ResponseEntity.ok(new ApiResponse<>("Profil récupéré avec succès", user));
     }
 
@@ -32,7 +33,7 @@ public class UserApiController {
     @Operation(summary = "Mettre à jour le profil")
     public ResponseEntity<ApiResponse<UserDto>> updateMe(@Valid @RequestBody UpdateUserRequest request,
                                                          Authentication auth) {
-        Long userId = (Long) auth.getPrincipal();
+        Long userId = AuthContextUtils.requireUserId(auth);
         UserDto user = userService.convertToDto(userService.updateUser(userId, request));
         return ResponseEntity.ok(new ApiResponse<>("Profil mis à jour avec succès", user));
     }
@@ -41,7 +42,7 @@ public class UserApiController {
     @Operation(summary = "Changer le mot de passe")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
                                                Authentication auth) {
-        Long userId = (Long) auth.getPrincipal();
+        Long userId = AuthContextUtils.requireUserId(auth);
         userService.changePassword(userId, request);
         return ResponseEntity.noContent().build();
     }
