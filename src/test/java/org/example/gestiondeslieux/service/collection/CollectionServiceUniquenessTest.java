@@ -1,6 +1,7 @@
 package org.example.gestiondeslieux.service.collection;
 
 import org.example.gestiondeslieux.exceptions.AlreadyExistsException;
+import org.example.gestiondeslieux.exceptions.InvalidFormatException;
 import org.example.gestiondeslieux.model.Collection;
 import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.repository.CollectionRepository;
@@ -47,20 +48,14 @@ class CollectionServiceUniquenessTest {
     }
 
     @Test
-    void createCollection_should_reject_duplicate_null_tag_filter() {
+    void createCollection_should_reject_null_tag_filter() {
         User user = createUser();
-        collectionRepository.save(Collection.builder()
-                .name("Tous les lieux")
-                .tagFilter(null)
-                .user(user)
-                .isShared(false)
-                .build());
 
         CreateCollectionRequest req = new CreateCollectionRequest();
-        req.setName("Dup All Places");
+        req.setName("Invalid All Places");
         req.setTagFilter(null);
 
-        assertThrows(AlreadyExistsException.class, () -> collectionService.createCollection(req, user.getId()));
+        assertThrows(InvalidFormatException.class, () -> collectionService.createCollection(req, user.getId()));
     }
 
     @Test

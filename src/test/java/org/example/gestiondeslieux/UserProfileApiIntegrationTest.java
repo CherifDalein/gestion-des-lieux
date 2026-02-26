@@ -61,7 +61,7 @@ class UserProfileApiIntegrationTest extends ApiIntegrationTestSupport {
         JsonNode stats = getJson("/api/users/me/stats", session.accessToken(), status().isOk());
         JsonNode data = unwrapApiResponseData(stats);
 
-        assertEquals(2L, data.path("collectionCount").asLong(-1L));
+        assertEquals(1L, data.path("collectionCount").asLong(-1L));
         assertEquals(1L, data.path("ownedPlaceCount").asLong(-1L));
         assertEquals(1L, data.path("sharedCollectionCount").asLong(-1L));
     }

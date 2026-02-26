@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.controller.api.CollectionApiController;
 import org.example.gestiondeslieux.dto.CollectionDto;
 import org.example.gestiondeslieux.exceptions.AlreadyExistsException;
+import org.example.gestiondeslieux.exceptions.InvalidFormatException;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.model.Collection;
 import org.example.gestiondeslieux.model.Place;
@@ -37,12 +38,13 @@ public class CollectionService implements ICollectionService {
     @Override
     @Transactional
     public Collection createCollection(CreateCollectionRequest request, Long userId) {
-        ensureUniqueTagFilterOnCreate(userId, request.getTagFilter());
+        String tagFilter = normalizeRequiredTagFilter(request.getTagFilter());
+        ensureUniqueTagFilterOnCreate(userId, tagFilter);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         Collection collection = Collection.builder()
                 .name(request.getName())
-                .tagFilter(request.getTagFilter())
+                .tagFilter(tagFilter)
                 .user(user)
                 .isShared(false)
                 .build();
@@ -55,8 +57,9 @@ public class CollectionService implements ICollectionService {
         Collection collection = getCollectionById(id, userId);
         if (request.getName() != null) collection.setName(request.getName());
         if (request.getTagFilter() != null) {
-            ensureUniqueTagFilterOnUpdate(userId, collection, request.getTagFilter());
-            collection.setTagFilter(request.getTagFilter());
+            String nextTagFilter = normalizeRequiredTagFilter(request.getTagFilter());
+            ensureUniqueTagFilterOnUpdate(userId, collection, nextTagFilter);
+            collection.setTagFilter(nextTagFilter);
         }
         return collectionRepository.save(collection);
     }
@@ -86,16 +89,19 @@ public class CollectionService implements ICollectionService {
     @Override
     public Page<Place> getPlacesInCollection(Long collectionId, Long userId, Pageable pageable) {
         Collection collection = getCollectionById(collectionId, userId);
-        if (collection.getTagFilter() == null) {
-            return placeRepository.findByUserId(userId, pageable);
+        String tagFilter = collection.getTagFilter();
+        if (tagFilter == null || tagFilter.isBlank()) {
+            throw new ResourceNotFoundException("Collection", "id", collectionId);
         }
-        return placeRepository.findByUserIdAndTagPaged(userId, collection.getTagFilter(), pageable);
+        return placeRepository.findByUserIdAndTagPaged(userId, tagFilter, pageable);
     }
 
     @Override
     @Transactional
     public void syncCollectionsForUser(Long userId) {
-        getOrCreateAllPlacesCollection(userId);
+        // Legacy cleanup: "Tous les lieux" was represented by tagFilter = null and must not be persisted.
+        collectionRepository.deleteByUserIdAndTagFilterIsNull(userId);
+
         List<String> tags = placeRepository.findDistinctTagsByUserId(userId);
         List<Collection> existing = collectionRepository.findByUserId(userId);
 
@@ -125,23 +131,6 @@ public class CollectionService implements ICollectionService {
     }
 
     @Override
-    @Transactional
-    public Collection getOrCreateAllPlacesCollection(Long userId) {
-        return collectionRepository.findByUserIdAndTagFilterIsNull(userId)
-                .orElseGet(() -> {
-                    User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-                    Collection c = Collection.builder()
-                            .name("Tous les lieux")
-                            .tagFilter(null)
-                            .user(user)
-                            .isShared(false)
-                            .build();
-                    return collectionRepository.save(c);
-                });
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public CollectionDto convertToDto(Collection collection) {
         Hibernate.initialize(collection.getUser());
@@ -168,12 +157,6 @@ public class CollectionService implements ICollectionService {
     }
 
     private void ensureUniqueTagFilterOnCreate(Long userId, String tagFilter) {
-        if (tagFilter == null) {
-            if (collectionRepository.existsByUserIdAndTagFilterIsNull(userId)) {
-                throw new AlreadyExistsException("Collection", "tagFilter", "null");
-            }
-            return;
-        }
         if (collectionRepository.existsByUserIdAndTagFilter(userId, tagFilter)) {
             throw new AlreadyExistsException("Collection", "tagFilter", tagFilter);
         }
@@ -186,5 +169,12 @@ public class CollectionService implements ICollectionService {
         if (collectionRepository.existsByUserIdAndTagFilter(userId, nextTagFilter)) {
             throw new AlreadyExistsException("Collection", "tagFilter", nextTagFilter);
         }
+    }
+
+    private String normalizeRequiredTagFilter(String tagFilter) {
+        if (tagFilter == null || tagFilter.isBlank()) {
+            throw new InvalidFormatException("tagFilter", "valeur obligatoire");
+        }
+        return tagFilter.trim();
     }
 }

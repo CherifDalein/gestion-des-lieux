@@ -91,11 +91,11 @@ public class DataInitializer implements CommandLineRunner {
                 48.8357, 2.3826, List.of("parking", "paris", "pratique"), bob);
 
         // --- Collections Alice ---
-        Collection allPlaces = collectionRepository.save(Collection.builder()
-                .name("Tous les lieux").tagFilter(null).user(alice).isShared(false).build());
         Collection colParis = collectionRepository.save(Collection.builder()
                 .name("paris").tagFilter("paris").user(alice).isShared(false).build());
-        for (String tag : List.of("café", "restaurant", "tourisme", "musée",
+        Collection colTourisme = collectionRepository.save(Collection.builder()
+                .name("tourisme").tagFilter("tourisme").user(alice).isShared(false).build());
+        for (String tag : List.of("café", "restaurant", "musée",
                 "jardin", "plage", "nature", "lyon", "gastronomie")) {
             collectionRepository.save(Collection.builder()
                     .name(tag).tagFilter(tag).user(alice).isShared(false).build());
@@ -126,7 +126,7 @@ public class DataInitializer implements CommandLineRunner {
                 .token("test-token-expired")
                 .label("Token expiré (test)")
                 .resourceType(ResourceType.COLLECTION)
-                .resourceId(allPlaces.getId())
+                .resourceId(colTourisme.getId())
                 .permission(Permission.READ)
                 .expiresAt(LocalDateTime.now().minusDays(1))
                 .createdBy(alice)

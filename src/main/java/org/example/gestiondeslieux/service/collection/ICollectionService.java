@@ -18,6 +18,5 @@ public interface ICollectionService {
     List<Collection> getCollectionsByUser(Long userId);
     Page<Place> getPlacesInCollection(Long collectionId, Long userId, Pageable pageable);
     void syncCollectionsForUser(Long userId);
-    Collection getOrCreateAllPlacesCollection(Long userId);
     CollectionDto convertToDto(Collection collection);
 }
