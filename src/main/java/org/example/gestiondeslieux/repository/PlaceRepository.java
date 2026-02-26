@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface PlaceRepository extends JpaRepository<Place, Long> {
 
     Page<Place> findByUserId(Long userId, Pageable pageable);
+    long countByUserId(Long userId);
 
     Page<Place> findByUserIdAndTitleContainingIgnoreCaseOrUserIdAndDescriptionContainingIgnoreCase(
         Long userId1, String titleKeyword, Long userId2, String descKeyword, Pageable pageable);

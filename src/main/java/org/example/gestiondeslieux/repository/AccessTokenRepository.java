@@ -1,5 +1,6 @@
 package org.example.gestiondeslieux.repository;
 
+import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.model.AccessToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,7 @@ public interface AccessTokenRepository extends JpaRepository<AccessToken, Long> 
     List<AccessToken> findByCreatedByIdAndRevokedAtIsNull(Long userId);
 
     List<AccessToken> findByCreatedById(Long userId);
+    long countDistinctResourceIdByCreatedByIdAndResourceType(Long userId, ResourceType resourceType);
 
     @Query("SELECT t FROM AccessToken t WHERE t.token = :token AND t.revokedAt IS NULL " +
            "AND (t.expiresAt IS NULL OR t.expiresAt > :now)")

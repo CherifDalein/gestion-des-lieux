@@ -1,5 +1,6 @@
 package org.example.gestiondeslieux.service.user;
 
+import org.example.gestiondeslieux.dto.UserStatsDto;
 import org.example.gestiondeslieux.dto.UserDto;
 import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.request.ChangePasswordRequest;
@@ -14,6 +15,7 @@ public interface IUserService {
     User findByEmail(String email);
     User findById(Long userId);
     UserDto convertToDto(User user);
+    UserStatsDto getUserStats(Long userId);
     User updateUser(Long userId, UpdateUserRequest request);
     void changePassword(Long userId, ChangePasswordRequest request);
 }

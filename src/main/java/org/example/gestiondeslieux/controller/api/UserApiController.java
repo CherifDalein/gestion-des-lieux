@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.UserDto;
+import org.example.gestiondeslieux.dto.UserStatsDto;
 import org.example.gestiondeslieux.request.ChangePasswordRequest;
 import org.example.gestiondeslieux.request.UpdateUserRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
@@ -27,6 +28,13 @@ public class UserApiController {
     public ResponseEntity<ApiResponse<UserDto>> getMe(Authentication auth) {
         UserDto user = userService.convertToDto(userService.findById(AuthContextUtils.requireUserId(auth)));
         return ResponseEntity.ok(new ApiResponse<>("Profil récupéré avec succès", user));
+    }
+
+    @GetMapping("/me/stats")
+    @Operation(summary = "Statistiques du profil courant")
+    public ResponseEntity<ApiResponse<UserStatsDto>> getMeStats(Authentication auth) {
+        UserStatsDto stats = userService.getUserStats(AuthContextUtils.requireUserId(auth));
+        return ResponseEntity.ok(new ApiResponse<>("Statistiques récupérées avec succès", stats));
     }
 
     @PutMapping("/me")

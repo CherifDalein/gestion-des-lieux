@@ -2,12 +2,17 @@ package org.example.gestiondeslieux.service.user;
 
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.UserDto;
+import org.example.gestiondeslieux.dto.UserStatsDto;
 import org.example.gestiondeslieux.controller.api.UserApiController;
+import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.exceptions.AlreadyExistsException;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.exceptions.UnauthorizedAccessException;
 import org.example.gestiondeslieux.model.Role;
 import org.example.gestiondeslieux.model.User;
+import org.example.gestiondeslieux.repository.AccessTokenRepository;
+import org.example.gestiondeslieux.repository.CollectionRepository;
+import org.example.gestiondeslieux.repository.PlaceRepository;
 import org.example.gestiondeslieux.repository.RoleRepository;
 import org.example.gestiondeslieux.repository.UserRepository;
 import org.example.gestiondeslieux.request.ChangePasswordRequest;
@@ -31,6 +36,9 @@ public class UserService implements IUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final CollectionRepository collectionRepository;
+    private final PlaceRepository placeRepository;
+    private final AccessTokenRepository accessTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
 
@@ -88,6 +96,20 @@ public class UserService implements IUserService {
         } catch (Exception ignored) {
         }
         return dto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserStatsDto getUserStats(Long userId) {
+        // Keep current behavior consistent with other endpoints: 404 if user does not exist.
+        findById(userId);
+
+        long collectionCount = collectionRepository.countByUserId(userId);
+        long ownedPlaceCount = placeRepository.countByUserId(userId);
+        long sharedCollectionCount = accessTokenRepository
+                .countDistinctResourceIdByCreatedByIdAndResourceType(userId, ResourceType.COLLECTION);
+
+        return new UserStatsDto(collectionCount, ownedPlaceCount, sharedCollectionCount);
     }
 
     @Override
