@@ -31,6 +31,4 @@ public class PlaceDto extends RepresentationModel<PlaceDto> {
     private LocalDateTime updatedAt;
     @Schema(example = "alice@test.com")
     private String email;
-    @Schema(example = "2")
-    private int collectionCount;
 }

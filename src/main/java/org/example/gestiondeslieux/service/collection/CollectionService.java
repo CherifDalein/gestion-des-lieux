@@ -3,6 +3,7 @@ package org.example.gestiondeslieux.service.collection;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.controller.api.CollectionApiController;
 import org.example.gestiondeslieux.dto.CollectionDto;
+import org.example.gestiondeslieux.exceptions.AlreadyExistsException;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.model.Collection;
 import org.example.gestiondeslieux.model.Place;
@@ -36,6 +37,7 @@ public class CollectionService implements ICollectionService {
     @Override
     @Transactional
     public Collection createCollection(CreateCollectionRequest request, Long userId) {
+        ensureUniqueTagFilterOnCreate(userId, request.getTagFilter());
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         Collection collection = Collection.builder()
@@ -52,7 +54,10 @@ public class CollectionService implements ICollectionService {
     public Collection updateCollection(Long id, UpdateCollectionRequest request, Long userId) {
         Collection collection = getCollectionById(id, userId);
         if (request.getName() != null) collection.setName(request.getName());
-        if (request.getTagFilter() != null) collection.setTagFilter(request.getTagFilter());
+        if (request.getTagFilter() != null) {
+            ensureUniqueTagFilterOnUpdate(userId, collection, request.getTagFilter());
+            collection.setTagFilter(request.getTagFilter());
+        }
         return collectionRepository.save(collection);
     }
 
@@ -160,5 +165,26 @@ public class CollectionService implements ICollectionService {
         }
 
         return dto;
+    }
+
+    private void ensureUniqueTagFilterOnCreate(Long userId, String tagFilter) {
+        if (tagFilter == null) {
+            if (collectionRepository.existsByUserIdAndTagFilterIsNull(userId)) {
+                throw new AlreadyExistsException("Collection", "tagFilter", "null");
+            }
+            return;
+        }
+        if (collectionRepository.existsByUserIdAndTagFilter(userId, tagFilter)) {
+            throw new AlreadyExistsException("Collection", "tagFilter", tagFilter);
+        }
+    }
+
+    private void ensureUniqueTagFilterOnUpdate(Long userId, Collection current, String nextTagFilter) {
+        if (nextTagFilter.equals(current.getTagFilter())) {
+            return;
+        }
+        if (collectionRepository.existsByUserIdAndTagFilter(userId, nextTagFilter)) {
+            throw new AlreadyExistsException("Collection", "tagFilter", nextTagFilter);
+        }
     }
 }

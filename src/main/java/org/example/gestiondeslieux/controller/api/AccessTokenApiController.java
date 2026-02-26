@@ -6,16 +6,23 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.gestiondeslieux.dto.AccessTokenDto;
 import org.example.gestiondeslieux.dto.DiscoverResponse;
+import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.model.AccessToken;
+import org.example.gestiondeslieux.model.Collection;
+import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.request.CreateTokenRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
+import org.example.gestiondeslieux.service.collection.ICollectionService;
+import org.example.gestiondeslieux.service.place.IPlaceService;
 import org.example.gestiondeslieux.service.token.IAccessTokenService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +33,8 @@ import java.util.Map;
 public class AccessTokenApiController {
 
     private final IAccessTokenService accessTokenService;
+    private final IPlaceService placeService;
+    private final ICollectionService collectionService;
 
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -80,12 +89,34 @@ public class AccessTokenApiController {
     @Operation(summary = "Découvrir les ressources accessibles avec un token")
     public ResponseEntity<ApiResponse<DiscoverResponse>> discover(@RequestParam String token) {
         AccessToken at = accessTokenService.validateAndGet(token);
+        LocalDateTime now = LocalDateTime.now();
+        Long ownerId = at.getCreatedBy().getId();
         DiscoverResponse dr = new DiscoverResponse();
         dr.setServerUrl(baseUrl);
         dr.setTokenLabel(at.getLabel());
+        dr.setResourceType(at.getResourceType());
+        dr.setResourceId(at.getResourceId());
+        dr.setPermission(at.getPermission());
+        dr.setExpiresAt(at.getExpiresAt());
+        dr.setExpired(at.getExpiresAt() != null && at.getExpiresAt().isBefore(now));
+        dr.setRevoked(at.getRevokedAt() != null);
         dr.setCollections(List.of());
         dr.setPlaces(List.of());
         dr.setLocationAvailable(false);
+
+        if (at.getResourceType() == ResourceType.PLACE) {
+            Place place = placeService.getPlaceByIdWithToken(at.getResourceId(), null, at.getToken());
+            dr.setPlaces(List.of(placeService.convertToDto(place)));
+        } else if (at.getResourceType() == ResourceType.COLLECTION) {
+            Collection collection = collectionService.getCollectionById(at.getResourceId(), ownerId);
+            dr.setCollections(List.of(collectionService.convertToDto(collection)));
+            dr.setPlaces(collectionService.getPlacesInCollection(at.getResourceId(), ownerId, Pageable.unpaged())
+                    .map(placeService::convertToDto)
+                    .toList());
+        } else if (at.getResourceType() == ResourceType.CURRENT_LOCATION) {
+            dr.setLocationAvailable(true);
+        }
+
         return ResponseEntity.ok(new ApiResponse<>("Découverte effectuée avec succès", dr));
     }
 }

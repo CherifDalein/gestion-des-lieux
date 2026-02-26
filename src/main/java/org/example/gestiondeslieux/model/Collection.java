@@ -7,7 +7,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "collections")
+@Table(name = "collections", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_collection_user_tag_filter", columnNames = {"user_id", "tag_filter"})
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +23,7 @@ public class Collection {
     @Column(nullable = false, length = 200)
     private String name;
 
-    @Column(length = 100)
+    @Column(name = "tag_filter", length = 100)
     private String tagFilter;
 
     @ManyToOne(fetch = FetchType.LAZY)
