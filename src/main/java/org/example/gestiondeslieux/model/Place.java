@@ -1,26 +1,34 @@
 package org.example.gestiondeslieux.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
+@Table(name = "places", indexes = {
+    @Index(name = "idx_place_user", columnList = "user_id"),
+    @Index(name = "idx_place_coords", columnList = "latitude, longitude"),
+    @Index(name = "idx_place_user_updated", columnList = "user_id, updatedAt")
+})
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Place {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(nullable = false)
-    private Long userId;
-
+    @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(length = 1000)
+    @Column(length = 2000)
     private String description;
 
     @Column(nullable = false)
@@ -29,19 +37,27 @@ public class Place {
     @Column(nullable = false)
     private Double longitude;
 
+    @Column(length = 500)
+    private String imageUrl;
+
     @ElementCollection
-    @CollectionTable(
-            name = "place_tags",
-            joinColumns = @JoinColumn(name = "place_id")
-    )
-    @Column(name = "tag")
-    private Set<String> tags = new HashSet<>();
+    @CollectionTable(name = "place_tags", joinColumns = @JoinColumn(name = "place_id"))
+    @Column(name = "tag", length = 100)
+    @Builder.Default
+    private List<String> tags = new ArrayList<>();
 
-    private Instant createdAt;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = Instant.now();
-    }
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Version
+    private Long version;
 }
-
