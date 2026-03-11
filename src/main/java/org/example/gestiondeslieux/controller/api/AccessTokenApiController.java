@@ -18,6 +18,7 @@ import org.example.gestiondeslieux.service.place.IPlaceService;
 import org.example.gestiondeslieux.service.token.IAccessTokenService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +40,8 @@ public class AccessTokenApiController {
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Créer un token de partage")
     public ResponseEntity<ApiResponse<AccessTokenDto>> createToken(@Valid @RequestBody CreateTokenRequest req,
                                                                    Authentication auth) {
@@ -48,7 +50,7 @@ public class AccessTokenApiController {
                 .body(new ApiResponse<>("Token créé avec succès", accessTokenService.convertToDto(token)));
     }
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Lister mes tokens")
     public ResponseEntity<ApiResponse<List<AccessTokenDto>>> getTokens(Authentication auth) {
         List<AccessTokenDto> list = accessTokenService.getTokensByUser(AuthContextUtils.requireUserId(auth))
@@ -56,7 +58,7 @@ public class AccessTokenApiController {
         return ResponseEntity.ok(new ApiResponse<>("Tokens récupérés avec succès", list));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Obtenir un token")
     public ResponseEntity<ApiResponse<AccessTokenDto>> getToken(@PathVariable Long id, Authentication auth) {
         AccessTokenDto dto = accessTokenService.convertToDto(
@@ -64,14 +66,16 @@ public class AccessTokenApiController {
         return ResponseEntity.ok(new ApiResponse<>("Token récupéré avec succès", dto));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Révoquer un token")
-    public ResponseEntity<Void> revokeToken(@PathVariable Long id, Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> revokeToken(@PathVariable Long id, Authentication auth) {
         accessTokenService.revokeToken(id, AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Token révoqué avec succès", null));
     }
 
-    @PatchMapping("/{id}/expiration")
+    @PatchMapping(value = "/{id}/expiration",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Modifier l'expiration d'un token")
     public ResponseEntity<ApiResponse<AccessTokenDto>> updateExpiration(
             @PathVariable Long id,
@@ -85,7 +89,7 @@ public class AccessTokenApiController {
                 accessTokenService.convertToDto(token)));
     }
 
-    @GetMapping("/discover")
+    @GetMapping(value = "/discover", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Découvrir les ressources accessibles avec un token")
     public ResponseEntity<ApiResponse<DiscoverResponse>> discover(@RequestParam String token) {
         AccessToken at = accessTokenService.validateAndGet(token);

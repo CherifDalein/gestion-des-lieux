@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +48,7 @@ public class PlaceApiController {
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Lister les lieux de l'utilisateur")
     public ResponseEntity<ApiResponse<Page<PlaceDto>>> getPlaces(Authentication auth,
                                                                  @PageableDefault(size = 20) Pageable pageable,
@@ -67,7 +68,8 @@ public class PlaceApiController {
                 "private, no-cache");
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Créer un lieu")
     public ResponseEntity<ApiResponse<PlaceDto>> createPlace(@Valid @RequestBody CreatePlaceRequest req,
                                                              Authentication auth) {
@@ -76,7 +78,7 @@ public class PlaceApiController {
                 .body(new ApiResponse<>("Lieu créé avec succès", placeService.convertToDto(p)));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Obtenir un lieu")
     public ResponseEntity<ApiResponse<PlaceDto>> getPlace(@PathVariable Long id,
                                                           @RequestParam(required = false) String token,
@@ -90,7 +92,9 @@ public class PlaceApiController {
                 "private, max-age=60, must-revalidate");
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Modifier un lieu")
     public ResponseEntity<ApiResponse<PlaceDto>> updatePlace(@PathVariable Long id,
                                                              @Valid @RequestBody UpdatePlaceRequest req,
@@ -99,14 +103,16 @@ public class PlaceApiController {
         return ResponseEntity.ok(new ApiResponse<>("Lieu mis à jour avec succès", placeService.convertToDto(p)));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Supprimer un lieu")
-    public ResponseEntity<Void> deletePlace(@PathVariable Long id, Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> deletePlace(@PathVariable Long id, Authentication auth) {
         placeService.deletePlace(id, AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Lieu supprimé avec succès", null));
     }
 
-    @PostMapping("/{id}/share")
+    @PostMapping(value = "/{id}/share",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Partager un lieu via token")
     public ResponseEntity<ApiResponse<ShareResponse>> sharePlace(
             @PathVariable Long id,
@@ -130,7 +136,7 @@ public class PlaceApiController {
         return ResponseEntity.ok(new ApiResponse<>("Lieu partagé avec succès", sr));
     }
 
-    @GetMapping("/search")
+    @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Rechercher des lieux")
     public ResponseEntity<ApiResponse<Page<PlaceDto>>> searchPlaces(
             @RequestParam(required = false) String q,
@@ -149,7 +155,7 @@ public class PlaceApiController {
         return ResponseEntity.ok(new ApiResponse<>("Recherche effectuée avec succès", page));
     }
 
-    @GetMapping("/nearby")
+    @GetMapping(value = "/nearby", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Lieux à proximité (Haversine)")
     public ResponseEntity<ApiResponse<Page<PlaceWithDistanceDto>>> getNearby(
             @RequestParam Double lat,
@@ -163,14 +169,14 @@ public class PlaceApiController {
         return ResponseEntity.ok(new ApiResponse<>("Lieux proches récupérés avec succès", page));
     }
 
-    @GetMapping("/tags")
+    @GetMapping(value = "/tags", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Tous les tags de l'utilisateur")
     public ResponseEntity<ApiResponse<List<String>>> getTags(Authentication auth) {
         return ResponseEntity.ok(new ApiResponse<>("Tags récupérés avec succès",
                 placeService.getAllTagsByUser(AuthContextUtils.requireUserId(auth))));
     }
 
-    @PostMapping("/{id}/tags/{tag}")
+    @PostMapping(value = "/{id}/tags/{tag}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Ajouter un tag")
     public ResponseEntity<ApiResponse<PlaceDto>> addTag(@PathVariable Long id,
                                                         @PathVariable String tag,
@@ -181,7 +187,7 @@ public class PlaceApiController {
                 placeService.convertToDto(placeService.getPlaceById(id, userId))));
     }
 
-    @DeleteMapping("/{id}/tags/{tag}")
+    @DeleteMapping(value = "/{id}/tags/{tag}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Retirer un tag")
     public ResponseEntity<ApiResponse<PlaceDto>> removeTag(@PathVariable Long id,
                                                            @PathVariable String tag,
@@ -192,7 +198,9 @@ public class PlaceApiController {
                 placeService.convertToDto(placeService.getPlaceById(id, userId))));
     }
 
-    @PostMapping("/{id}/image")
+    @PostMapping(value = "/{id}/image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Uploader une image")
     public ResponseEntity<ApiResponse<PlaceDto>> uploadImage(@PathVariable Long id,
                                                              @RequestParam("file") MultipartFile file,
@@ -203,7 +211,7 @@ public class PlaceApiController {
                 placeService.convertToDto(placeService.getPlaceById(id, userId))));
     }
 
-    @DeleteMapping("/{id}/image")
+    @DeleteMapping(value = "/{id}/image", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Supprimer l'image principale")
     public ResponseEntity<ApiResponse<PlaceDto>> deleteImage(@PathVariable Long id, Authentication auth) {
         Place p = placeImageService.deleteMainImage(id, AuthContextUtils.requireUserId(auth));

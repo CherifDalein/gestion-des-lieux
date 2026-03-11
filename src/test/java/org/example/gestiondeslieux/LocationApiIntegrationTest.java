@@ -28,8 +28,8 @@ class LocationApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/api/location/share").header("Authorization", "Bearer " + session.accessToken()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
         mockMvc.perform(delete("/api/location/current").header("Authorization", "Bearer " + session.accessToken()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
     }
 }

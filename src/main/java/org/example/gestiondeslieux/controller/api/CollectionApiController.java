@@ -57,7 +57,7 @@ public class CollectionApiController {
         return accessTokenService.validateAndGet(token).getCreatedBy().getId();
     }
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Lister les collections")
     public ResponseEntity<ApiResponse<List<CollectionDto>>> getCollections(Authentication auth) {
         List<CollectionDto> list = collectionService.getCollectionsByUser(AuthContextUtils.requireUserId(auth))
@@ -65,7 +65,7 @@ public class CollectionApiController {
         return ResponseEntity.ok(new ApiResponse<>("Collections récupérées avec succès", list));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Obtenir une collection")
     public ResponseEntity<ApiResponse<CollectionDto>> getCollection(@PathVariable Long id,
                                                                     @RequestParam(required = false) String token,
@@ -79,7 +79,7 @@ public class CollectionApiController {
                 "private, no-cache");
     }
 
-    @GetMapping("/{id}/places")
+    @GetMapping(value = "/{id}/places", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Lieux dans la collection")
     public ResponseEntity<ApiResponse<Page<PlaceDto>>> getPlaces(
             @PathVariable Long id,
@@ -117,7 +117,9 @@ public class CollectionApiController {
                 .body(content);
     }
 
-    @PostMapping("/{id}/share")
+    @PostMapping(value = "/{id}/share",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Partager une collection via token")
     public ResponseEntity<ApiResponse<ShareResponse>> shareCollection(
             @PathVariable Long id,

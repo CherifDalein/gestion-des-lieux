@@ -3,6 +3,7 @@ package org.example.gestiondeslieux.controller.api;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.image.IPlaceImageService;
 import org.springframework.http.HttpHeaders;
@@ -34,10 +35,10 @@ public class ImageApiController {
                 .body(bytes);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Supprimer une image")
-    public ResponseEntity<Void> deleteImage(@PathVariable Long id, Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long id, Authentication auth) {
         placeImageService.deleteImage(id, AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Image supprimée avec succès", null));
     }
 }

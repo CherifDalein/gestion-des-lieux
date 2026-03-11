@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,6 +32,11 @@ class PlaceApiIntegrationTest extends ApiIntegrationTestSupport {
 
         mockMvc.perform(get("/api/places").header("Authorization", "Bearer " + session.accessToken()))
                 .andExpect(status().isOk());
+        mockMvc.perform(get("/api/places")
+                        .header("Authorization", "Bearer " + session.accessToken())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
         mockMvc.perform(get("/api/places/" + placeId).header("Authorization", "Bearer " + session.accessToken()))
                 .andExpect(status().isOk());
 
@@ -67,7 +73,7 @@ class PlaceApiIntegrationTest extends ApiIntegrationTestSupport {
         mockMvc.perform(get("/api/images/" + imageId).header("Authorization", "Bearer " + session.accessToken()))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/api/images/" + imageId).header("Authorization", "Bearer " + session.accessToken()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
 
         MockMultipartFile secondImage = new MockMultipartFile(
                 "file", "img-2.txt", MediaType.TEXT_PLAIN_VALUE, "image-2".getBytes(StandardCharsets.UTF_8));
@@ -82,6 +88,6 @@ class PlaceApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().is2xxSuccessful());
 
         mockMvc.perform(delete("/api/places/" + placeId).header("Authorization", "Bearer " + session.accessToken()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
     }
 }

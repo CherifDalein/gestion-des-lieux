@@ -29,8 +29,7 @@ class AuthApiIntegrationTest extends ApiIntegrationTestSupport {
                 "{\"refreshToken\":\"" + refreshToken + "\"}",
                 status().isOk());
 
-        mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isNoContent());
+        postJson("/api/auth/logout", "", accessToken, status().isOk(), false);
 
         postJson("/api/auth/login", """
                 {"email":"%s","password":"wrong-password"}
