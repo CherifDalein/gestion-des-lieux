@@ -11,6 +11,7 @@ import org.example.gestiondeslieux.request.UpdateUserRequest;
 import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.user.IUserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,21 +24,23 @@ public class UserApiController {
 
     private final IUserService userService;
 
-    @GetMapping("/me")
+    @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Profil courant")
     public ResponseEntity<ApiResponse<UserDto>> getMe(Authentication auth) {
         UserDto user = userService.convertToDto(userService.findById(AuthContextUtils.requireUserId(auth)));
         return ResponseEntity.ok(new ApiResponse<>("Profil récupéré avec succès", user));
     }
 
-    @GetMapping("/me/stats")
+    @GetMapping(value = "/me/stats", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Statistiques du profil courant")
     public ResponseEntity<ApiResponse<UserStatsDto>> getMeStats(Authentication auth) {
         UserStatsDto stats = userService.getUserStats(AuthContextUtils.requireUserId(auth));
         return ResponseEntity.ok(new ApiResponse<>("Statistiques récupérées avec succès", stats));
     }
 
-    @PutMapping("/me")
+    @PutMapping(value = "/me",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Mettre à jour le profil")
     public ResponseEntity<ApiResponse<UserDto>> updateMe(@Valid @RequestBody UpdateUserRequest request,
                                                          Authentication auth) {
@@ -46,12 +49,14 @@ public class UserApiController {
         return ResponseEntity.ok(new ApiResponse<>("Profil mis à jour avec succès", user));
     }
 
-    @PutMapping("/me/password")
+    @PutMapping(value = "/me/password",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Changer le mot de passe")
-    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
-                                               Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                                                            Authentication auth) {
         Long userId = AuthContextUtils.requireUserId(auth);
         userService.changePassword(userId, request);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Mot de passe modifié avec succès", null));
     }
 }

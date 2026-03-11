@@ -11,6 +11,5 @@ services:
         value: /tmp/uploads/images
       - key: AUTH_TOKEN_JWT_SECRET
         generateValue: true
-      # Mets l'URL publique Render de ton service apres le 1er deploy.
       - key: APP_SHARE_BASE_URL
         value: https://gestion-des-lieux.onrender.com

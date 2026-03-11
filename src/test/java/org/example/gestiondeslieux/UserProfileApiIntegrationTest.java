@@ -30,7 +30,7 @@ class UserProfileApiIntegrationTest extends ApiIntegrationTestSupport {
         String newPassword = "password456";
         putJson("/api/users/me/password", """
                 {"currentPassword":"%s","newPassword":"%s"}
-                """.formatted(session.password(), newPassword), session.accessToken(), status().isNoContent());
+                """.formatted(session.password(), newPassword), session.accessToken(), status().isOk());
 
         postJson("/api/auth/login", """
                 {"email":"%s","password":"%s"}

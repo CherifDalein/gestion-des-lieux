@@ -13,6 +13,7 @@ import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.location.ICurrentLocationService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +29,9 @@ public class LocationApiController {
     @Value("${app.share.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @PostMapping("/update")
+    @PostMapping(value = "/update",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Créer ou mettre à jour la position courante (upsert)")
     public ResponseEntity<ApiResponse<CurrentLocationDto>> update(@Valid @RequestBody UpdateLocationRequest req,
                                                                   Authentication auth) {
@@ -37,7 +40,7 @@ public class LocationApiController {
                 locationService.convertToDto(loc)));
     }
 
-    @GetMapping("/current")
+    @GetMapping(value = "/current", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Obtenir la position courante")
     public ResponseEntity<ApiResponse<CurrentLocationDto>> getCurrent(Authentication auth) {
         CurrentLocationDto dto = locationService.convertToDto(
@@ -45,14 +48,14 @@ public class LocationApiController {
         return ResponseEntity.ok(new ApiResponse<>("Position courante récupérée avec succès", dto));
     }
 
-    @DeleteMapping("/current")
+    @DeleteMapping(value = "/current", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Supprimer la position courante")
-    public ResponseEntity<Void> deleteCurrent(Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> deleteCurrent(Authentication auth) {
         locationService.deleteLocation(AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Position courante supprimée avec succès", null));
     }
 
-    @PostMapping("/share")
+    @PostMapping(value = "/share", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Démarrer le partage de position")
     public ResponseEntity<ApiResponse<ShareLocationResponse>> startSharing(Authentication auth) {
         CurrentLocation loc = locationService.startSharing(AuthContextUtils.requireUserId(auth));
@@ -62,14 +65,14 @@ public class LocationApiController {
         return ResponseEntity.ok(new ApiResponse<>("Partage de position activé", res));
     }
 
-    @DeleteMapping("/share")
+    @DeleteMapping(value = "/share", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Arrêter le partage de position")
-    public ResponseEntity<Void> stopSharing(Authentication auth) {
+    public ResponseEntity<ApiResponse<Void>> stopSharing(Authentication auth) {
         locationService.stopSharing(AuthContextUtils.requireUserId(auth));
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Partage de position arrêté avec succès", null));
     }
 
-    @GetMapping("/public/{shareToken}")
+    @GetMapping(value = "/public/{shareToken}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Accès public à une position partagée")
     public ResponseEntity<ApiResponse<PublicLocationDto>> getPublic(@PathVariable String shareToken) {
         CurrentLocation loc = locationService.getSharedLocation(shareToken);

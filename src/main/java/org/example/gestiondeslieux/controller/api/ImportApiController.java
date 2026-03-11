@@ -11,6 +11,7 @@ import org.example.gestiondeslieux.service.export.IExportService;
 import org.example.gestiondeslieux.response.ApiResponse;
 import org.example.gestiondeslieux.security.AuthContextUtils;
 import org.example.gestiondeslieux.service.place.IPlaceService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,8 @@ public class ImportApiController {
     private final IPlaceService placeService;
     private final IExportService exportService;
 
-    @PostMapping(consumes = "multipart/form-data")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Importer des lieux depuis un fichier")
     public ResponseEntity<ApiResponse<ImportResultDto>> importFile(
             @RequestParam("file") MultipartFile file,
@@ -53,7 +55,8 @@ public class ImportApiController {
         return ResponseEntity.ok(new ApiResponse<>("Import fichier terminé avec succès", result));
     }
 
-    @PostMapping(consumes = "application/json")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Importer des lieux depuis JSON avec contenu brut")
     public ResponseEntity<ApiResponse<ImportResultDto>> importJson(
             @RequestBody org.example.gestiondeslieux.request.ImportRequest req,

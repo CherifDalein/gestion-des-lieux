@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -29,8 +28,7 @@ class AuthApiIntegrationTest extends ApiIntegrationTestSupport {
                 "{\"refreshToken\":\"" + refreshToken + "\"}",
                 status().isOk());
 
-        mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isNoContent());
+        postJson("/api/auth/logout", "", accessToken, status().isOk(), false);
 
         postJson("/api/auth/login", """
                 {"email":"%s","password":"wrong-password"}

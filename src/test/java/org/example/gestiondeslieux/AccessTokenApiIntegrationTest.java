@@ -55,7 +55,7 @@ class AccessTokenApiIntegrationTest extends ApiIntegrationTestSupport {
         assertTrue(discoverData.path("revoked").isBoolean());
 
         mockMvc.perform(delete("/api/tokens/" + tokenId).header("Authorization", "Bearer " + session.accessToken()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -90,6 +90,6 @@ class AccessTokenApiIntegrationTest extends ApiIntegrationTestSupport {
         assertTrue(discoverData.path("places").size() >= 1);
 
         mockMvc.perform(delete("/api/tokens/" + tokenId).header("Authorization", "Bearer " + session.accessToken()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
     }
 }
