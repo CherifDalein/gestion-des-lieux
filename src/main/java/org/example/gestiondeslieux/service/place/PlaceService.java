@@ -221,7 +221,7 @@ public class PlaceService implements IPlaceService {
             Double longitude = candidate.getLongitude();
 
             if (latitude == null || longitude == null) {
-                result.getErrors().add("Lieu ignore: coordonnees manquantes ou invalides");
+                result.getErrors().add("Lieu ignoré : coordonnées manquantes ou invalides");
                 continue;
             }
 

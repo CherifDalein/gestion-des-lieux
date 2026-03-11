@@ -12,9 +12,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         configurer
-            .favorParameter(true)
-            .parameterName("format")
-            .ignoreAcceptHeader(false)
+            .favorParameter(false)
+            .ignoreAcceptHeader(true)
             .defaultContentType(MediaType.APPLICATION_JSON)
             .mediaType("json",    MediaType.APPLICATION_JSON)
             .mediaType("gpx",     GeoMediaTypes.GPX)

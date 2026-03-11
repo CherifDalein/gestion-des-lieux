@@ -10,6 +10,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -44,5 +47,70 @@ class ImportApiIntegrationTest extends ApiIntegrationTestSupport {
                 session.accessToken(), status().isOk());
         JsonNode thirdData = unwrapApiResponseData(thirdImport);
         assertTrue(thirdData.path("imported").asInt(-1) >= 1);
+    }
+
+    @Test
+    void import_endpoints_should_ignore_xml_accept_and_still_return_json() throws Exception {
+        AuthSession session = registerRandomUser("import-accept");
+        String title = "Imported Accept " + UUID.randomUUID().toString().substring(0, 8);
+        String geojson = """
+                {"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[2.35,48.85]},"properties":{"title":"%s"}}]}
+                """.formatted(title);
+
+        mockMvc.perform(post("/api/import")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_XML)
+                        .header("Authorization", "Bearer " + session.accessToken())
+                        .content("{\"content\":%s,\"format\":\"GEOJSON\",\"skipDuplicates\":true}"
+                                .formatted(objectMapper.writeValueAsString(geojson))))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+
+        MockMultipartFile importFile = new MockMultipartFile(
+                "file", "import.geojson", MediaType.APPLICATION_JSON_VALUE, geojson.getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/import")
+                        .file(importFile)
+                        .accept(MediaType.APPLICATION_XML)
+                        .header("Authorization", "Bearer " + session.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void import_query_param_format_should_not_trigger_content_negotiation() throws Exception {
+        AuthSession session = registerRandomUser("import-query-format");
+        String title = "Imported Query " + UUID.randomUUID().toString().substring(0, 8);
+        String gpx = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+                  <wpt lat="48.8566" lon="2.3522">
+                    <name>%s</name>
+                  </wpt>
+                </gpx>
+                """.formatted(title);
+        MockMultipartFile importFile = new MockMultipartFile(
+                "file", "import.gpx", "application/gpx+xml", gpx.getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/import")
+                        .file(importFile)
+                        .param("format", "GPX")
+                        .param("skipDuplicates", "true")
+                        .header("Authorization", "Bearer " + session.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void import_errors_should_return_json_even_when_accept_requests_xml() throws Exception {
+        AuthSession session = registerRandomUser("import-error");
+
+        mockMvc.perform(post("/api/import")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_XML)
+                        .header("Authorization", "Bearer " + session.accessToken())
+                        .content("{\"content\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 }

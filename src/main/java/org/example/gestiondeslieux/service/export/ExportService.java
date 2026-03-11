@@ -328,7 +328,7 @@ public class ExportService implements IExportService {
             features.add(root);
             return features;
         }
-        throw new InvalidFormatException("GEOJSON", "type GeoJSON non supporte (attendu: FeatureCollection ou Feature)");
+        throw new InvalidFormatException("GEOJSON", "type GeoJSON non supporté (attendu : FeatureCollection ou Feature)");
     }
 
     private List<String> extractGeoJsonTags(JsonNode tagsNode) {

@@ -5,10 +5,12 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -65,19 +67,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidJson(HttpMessageNotReadableException ex) {
         return buildError(HttpStatus.BAD_REQUEST, "INVALID_JSON",
-                "Le corps JSON de la requete est invalide");
+                "Le corps JSON de la requête est invalide");
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleMissingParameter(MissingServletRequestParameterException ex) {
         return buildError(HttpStatus.BAD_REQUEST, "MISSING_PARAMETER",
-                "Parametre manquant: " + ex.getParameterName());
+                "Paramètre manquant : " + ex.getParameterName());
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return buildError(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER",
-                "Type invalide pour le parametre: " + ex.getName());
+                "Type invalide pour le paramètre : " + ex.getName());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -109,13 +111,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
         return buildError(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED",
-                "Methode HTTP non supportee pour cette route");
+                "Méthode HTTP non supportée pour cette route");
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
         return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE",
-                "Content-Type non supporte");
+                "Content-Type non supporté");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<Map<String, Object>> handleNotAcceptable(HttpMediaTypeNotAcceptableException ex) {
+        return buildError(HttpStatus.NOT_ACCEPTABLE, "NOT_ACCEPTABLE",
+                "Le client a demandé un format de réponse non supporté");
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -135,6 +143,8 @@ public class GlobalExceptionHandler {
         body.put("error", error);
         body.put("message", message);
         body.put("timestamp", LocalDateTime.now());
-        return ResponseEntity.status(status).body(body);
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body);
     }
 }

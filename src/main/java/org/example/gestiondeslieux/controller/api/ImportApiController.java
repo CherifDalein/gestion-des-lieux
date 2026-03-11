@@ -83,7 +83,7 @@ public class ImportApiController {
         try {
             return ExportFormat.valueOf(format.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new InvalidFormatException(format, "format non supporte");
+            throw new InvalidFormatException(format, "format non supporté");
         }
     }
 
