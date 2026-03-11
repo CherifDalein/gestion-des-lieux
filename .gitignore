@@ -42,3 +42,8 @@ out/
 !.env.example
 !.env.dev.example
 !.env.prod.example
+
+# Local runtime data
+data/*.mv.db
+data/*.trace.db
+uploads/
