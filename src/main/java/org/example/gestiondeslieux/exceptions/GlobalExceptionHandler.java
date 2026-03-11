@@ -131,6 +131,13 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONTENT_TOO_LARGE, "FILE_TOO_LARGE", "La taille du fichier dépasse la limite autorisée");
     }
 
+    @ExceptionHandler(OutOfMemoryError.class)
+    public ResponseEntity<Map<String, Object>> handleOOM(OutOfMemoryError ex) {
+        log.error("OutOfMemoryError", ex);
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
+                "Une erreur interne est survenue");
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         log.error("Unhandled exception", ex);
