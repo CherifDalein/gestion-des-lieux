@@ -1,83 +1,44 @@
 package org.example.gestiondeslieux.security;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import javax.crypto.SecretKey;
 import java.util.Date;
 
-@Component
 public class JwtUtil {
 
-    private final SecretKey secretKey;
-    private final long expirationMs;
-    private final long refreshExpirationMs;
+    // CORRECTION : Clé fixe pour éviter l'invalidation au redémarrage
+    private static final String SECRET_STRING = "votre_cle_tres_secrete_de_64_caracteres_minimum_pour_la_securite_123456";
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(SECRET_STRING.getBytes());
+    private static final long EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
-    public JwtUtil(
-            @Value("${auth.token.jwtSecret}") String secret,
-            @Value("${auth.token.expirationInMils:3600000}") long expirationMs,
-            @Value("${auth.token.refreshExpirationInMils:604800000}") long refreshExpirationMs) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-        this.expirationMs = expirationMs;
-        this.refreshExpirationMs = refreshExpirationMs;
-    }
-
-    public String generateAccessToken(Long userId, String email) {
+    public static String generateToken(Long userId, String email) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("userId", userId)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+                .signWith(SECRET_KEY, SignatureAlgorithm.HS512) // 👈 IMPORTANT
                 .compact();
     }
 
-    public String generateRefreshToken(Long userId, String email) {
-        return Jwts.builder()
-                .setSubject(email)
-                .claim("userId", userId)
-                .claim("refresh", true)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
-                .signWith(secretKey, SignatureAlgorithm.HS512)
-                .compact();
-    }
 
-    public Claims parseClaims(String token) {
+    public static String getEmailFromToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(SECRET_KEY)
                 .build()
                 .parseClaimsJws(token)
-                .getBody();
+                .getBody()
+                .getSubject();
     }
 
-    public String getEmailFromToken(String token) {
-        return parseClaims(token).getSubject();
-    }
-
-    public Long getUserIdFromToken(String token) {
-        return parseClaims(token).get("userId", Long.class);
-    }
-
-    public boolean isTokenValid(String token) {
-        try {
-            Claims claims = parseClaims(token);
-            return !claims.getExpiration().before(new Date());
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public boolean isRefreshToken(String token) {
-        try {
-            Object refreshClaim = parseClaims(token).get("refresh");
-            return Boolean.TRUE.equals(refreshClaim);
-        } catch (Exception e) {
-            return false;
-        }
+    public static Long getUserIdFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("userId", Long.class);
     }
 }
