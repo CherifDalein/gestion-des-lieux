@@ -1,6 +1,6 @@
 # GestionDesLieux - API de gestion et partage de lieux
 
-Application web Spring Boot permettant de gerer des lieux personnels, des collections, des imports/exports geographiques, des images et le partage securise via JWT et tokens d'acces.
+Application web Spring Boot permettant de gérer des lieux personnels, des collections, des imports/exports géographiques, des images et le partage sécurisé via JWT et tokens d'accès.
 
 ## Membres du groupe
 - DIALLO Mamadou Cherif
@@ -9,24 +9,24 @@ Application web Spring Boot permettant de gerer des lieux personnels, des collec
 - IDRISS Abakar Nokour
 - DIALLO Mohamed Moussa
 
-## Prerequis
+## Prérequis
 - **Java 17+** (obligatoire)
 - **Gradle** optionnel si vous utilisez le **Gradle Wrapper** fourni (`./gradlew` ou `gradlew.bat`)
 
 ## Installation et lancement
 
-### Etape 1 : Verifier Java
+### Étape 1 : Vérifier Java
 
 ```bash
-# Verifier la version de Java
+# Vérifier la version de Java
 java -version
 
-# Doit afficher Java 17 ou superieur
+# Doit afficher Java 17 ou supérieur
 ```
 
-### Etape 2 : Verifier Gradle
+### Étape 2 : Vérifier Gradle
 
-**Option recommandee : utiliser le Gradle Wrapper deja present dans le projet**
+**Option recommandée : utiliser le Gradle Wrapper déjà présent dans le projet**
 
 ```bash
 # Linux / Mac
@@ -36,7 +36,7 @@ java -version
 gradlew.bat -v
 ```
 
-**Si vous n'avez pas le wrapper**, vous pouvez installer Gradle systeme :
+**Si vous n'avez pas le wrapper**, vous pouvez installer Gradle système :
 - Windows : https://gradle.org/install/
 - Linux / Mac :
   ```bash
@@ -47,7 +47,7 @@ gradlew.bat -v
   sdk install gradle
   ```
 
-### Etape 3 : Lancer l'application
+### Étape 3 : Lancer l'application
 
 #### Linux / Mac
 ```bash
@@ -60,7 +60,7 @@ chmod +x run.sh
 run.bat run
 ```
 
-**Note** : les scripts detectent automatiquement `gradlew`/`gradlew.bat` ou `gradle` systeme.
+**Note** : les scripts détectent automatiquement `gradlew`/`gradlew.bat` ou `gradle` système.
 
 ### Commandes disponibles
 
@@ -68,8 +68,8 @@ run.bat run
 |----------|-------------|
 | `compile` | Compile le code source |
 | `test` | Lance les tests |
-| `package` | Cree le JAR executable Spring Boot |
-| `run` | Lance l'application (defaut) |
+| `package` | Crée le JAR exécutable Spring Boot |
+| `run` | Lance l'application (défaut) |
 | `clean` | Nettoie le projet |
 | `all` | Build complet (compile + tests + package) |
 
@@ -87,22 +87,22 @@ run.bat test
 run.bat package
 ```
 
-## Acces a l'application
+## Accès à l'application
 
-Une fois lancee, l'application est accessible sur :
+Une fois lancée, l'application est accessible sur :
 
 - **API REST** : http://localhost:8080
 - **Documentation OpenAPI JSON** : http://localhost:8080/api-docs
 - **Console H2** : http://localhost:8080/h2-console
 
-Configuration H2 par defaut :
+Configuration H2 par défaut :
 - **JDBC URL** : `jdbc:h2:file:./data/lieux_db;MODE=MySQL;DB_CLOSE_DELAY=-1`
 - **Username** : `sa`
 - **Password** : (vide)
 
 ## Comptes de test
 
-Des donnees de demonstration sont creees automatiquement au premier demarrage si la base est vide.
+Des données de démonstration sont créées automatiquement au premier démarrage si la base est vide.
 
 ### Utilisateurs
 - `alice@test.com` / `password123`
@@ -111,24 +111,24 @@ Des donnees de demonstration sont creees automatiquement au premier demarrage si
 ### Administrateur
 - `admin@test.com` / `admin123`
 
-## Fonctionnalites principales
+## Fonctionnalités principales
 
 - Authentification JWT avec access token et refresh token
 - Gestion CRUD des lieux personnels
-- Recherche par texte, tag et rayon geographique
-- Recherche de lieux a proximite (Haversine)
+- Recherche par texte, tag et rayon géographique
+- Recherche de lieux à proximité (Haversine)
 - Gestion de collections de lieux
 - Export de collections en `GeoJSON`, `GPX` et `KML`
 - Import de lieux depuis fichiers ou contenu brut `GeoJSON`, `GPX` et `KML`
-- Upload et suppression d'images associees aux lieux
-- Partage securise via tokens d'acces sur lieux et collections
+- Upload et suppression d'images associées aux lieux
+- Partage sécurisé via tokens d'accès sur lieux et collections
 - Partage temporaire de la position courante
-- Statistiques et mise a jour du profil utilisateur
-- API documentee via OpenAPI / Springdoc
+- Statistiques et mise à jour du profil utilisateur
+- API documentée via OpenAPI / Springdoc
 
 ## Endpoints principaux
 
-- `POST /api/auth/register` : creation de compte
+- `POST /api/auth/register` : création de compte
 - `POST /api/auth/login` : connexion
 - `POST /api/auth/refresh` : renouvellement des tokens
 - `GET /api/places` : liste des lieux
@@ -136,42 +136,42 @@ Des donnees de demonstration sont creees automatiquement au premier demarrage si
 - `GET /api/places/nearby` : lieux proches
 - `POST /api/collections/{id}/share` : partage d'une collection
 - `GET /api/collections/{id}/export` : export GeoJSON / GPX / KML
-- `POST /api/import` : import de fichier geographique
+- `POST /api/import` : import de fichier géographique
 - `POST /api/location/share` : partage de position courante
-- `GET /api/tokens/discover?token=...` : decouverte d'une ressource partagee
+- `GET /api/tokens/discover?token=...` : découverte d'une ressource partagée
 
 ## Architecture
 
 - **Framework** : Spring Boot 4.0.1
 - **Langage** : Java 17
 - **Build** : Gradle
-- **Base de donnees** : H2
-- **Securite** : Spring Security + JWT
+- **Base de données** : H2
+- **Sécurité** : Spring Security + JWT
 - **Documentation API** : Springdoc OpenAPI
-- **Deploiement** : Docker + Render
+- **Déploiement** : Docker + Render
 
-## Deploiement
+## Déploiement
 
 Le projet contient :
 - `Dockerfile` pour construire l'application
-- `render.yaml` pour un deploiement automatique sur Render
+- `render.yaml` pour un déploiement automatique sur Render
 
-## Depannage
+## Dépannage
 
 ### Erreur : `gradlew` ou `gradlew.bat` introuvable
-Le projet contient deja le wrapper Gradle. Verifiez que vous etes dans la racine du depot.
+Le projet contient déjà le wrapper Gradle. Vérifiez que vous êtes dans la racine du dépôt.
 
-### Erreur : ni wrapper ni Gradle systeme disponibles
+### Erreur : ni wrapper ni Gradle système disponibles
 Installez Gradle ou restaurez les fichiers `gradlew`, `gradlew.bat` et `gradle/wrapper/`.
 
-### Port 8080 deja utilise
-Modifiez le port dans [application.properties](/Users/laminouab/Academic_Projects/gestion-des-lieux/src/main/resources/application.properties) :
+### Port 8080 déjà utilisé
+Modifiez le port dans [application.properties](src/main/resources/application.properties) :
 
 ```properties
 server.port=8081
 ```
 
-### Base H2 verrouillee
+### Base H2 verrouillée
 Nettoyez les fichiers de build puis relancez :
 
 ```bash
@@ -182,8 +182,8 @@ Nettoyez les fichiers de build puis relancez :
 run.bat clean
 ```
 
-### Modifier la configuration par defaut
-La configuration locale est directement definie dans [application.properties](gestion-des-lieux/src/main/resources/application.properties). Vous pouvez y ajuster le port, la base H2, le secret JWT ou le dossier d'upload si necessaire.
+### Modifier la configuration par défaut
+La configuration locale est directement définie dans [application.properties](src/main/resources/application.properties). Vous pouvez y ajuster le port, la base H2, le secret JWT ou le dossier d'upload si nécessaire.
 
 ## Structure du projet
 
@@ -191,23 +191,23 @@ La configuration locale est directement definie dans [application.properties](ge
 gestion-des-lieux/
 ├── src/main/java/org/example/gestiondeslieux/
 │   ├── controller/api/   # Endpoints REST
-│   ├── service/          # Logique metier
-│   ├── repository/       # Acces aux donnees
-│   ├── model/            # Entites JPA
-│   ├── dto/              # Objets d'echange
-│   ├── request/          # Payloads d'entree
-│   ├── response/         # Reponses standardisees
-│   ├── security/         # JWT et filtres de securite
+│   ├── service/          # Logique métier
+│   ├── repository/       # Accès aux données
+│   ├── model/            # Entités JPA
+│   ├── dto/              # Objets d'échange
+│   ├── request/          # Payloads d'entrée
+│   ├── response/         # Réponses standardisées
+│   ├── security/         # JWT et filtres de sécurité
 │   ├── config/           # Configuration Spring
-│   └── data/             # Initialisation des donnees de demo
+│   └── data/             # Initialisation des données de démo
 ├── src/main/resources/
 │   └── application.properties
-├── src/test/java/        # Tests d'integration et de service
+├── src/test/java/        # Tests d'intégration et de service
 ├── run.sh                # Script Linux / Mac
 ├── run.bat               # Script Windows
 ├── build.gradle          # Configuration Gradle
 ├── gradlew               # Gradle Wrapper Unix
 ├── gradlew.bat           # Gradle Wrapper Windows
 ├── Dockerfile            # Image Docker
-└── render.yaml           # Deploiement Render
+└── render.yaml           # Déploiement Render
 ```
