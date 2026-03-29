@@ -102,6 +102,11 @@ Une fois lancée, l'application est accessible sur :
 - **Documentation OpenAPI JSON** : [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
 - **Console H2** : [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
 
+Instance de démonstration déployée :
+
+- **API Render** : [https://gestion-des-lieux.onrender.com/](https://gestion-des-lieux.onrender.com/)
+- **Swagger UI Render** : [https://gestion-des-lieux.onrender.com/swagger-ui/index.html](https://gestion-des-lieux.onrender.com/swagger-ui/index.html)
+
 Configuration H2 par défaut :
 
 - **JDBC URL** : `jdbc:h2:file:./data/lieux_db;MODE=MySQL;DB_CLOSE_DELAY=-1`
@@ -166,6 +171,10 @@ Le projet contient :
 
 - `Dockerfile` pour construire l'application
 - `render.yaml` pour un déploiement automatique sur Render
+
+URL de déploiement configurée :
+
+- [https://gestion-des-lieux.onrender.com/](https://gestion-des-lieux.onrender.com/)
 
 ## Dépannage
 
