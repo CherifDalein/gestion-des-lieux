@@ -99,6 +99,7 @@ run.bat package
 Une fois lancée, l'application est accessible sur :
 
 - **API REST** : [http://localhost:8080](http://localhost:8080)
+- **Interface Swagger UI** : [http://127.0.0.1:8080/swagger-ui/index.html](http://127.0.0.1:8080/swagger-ui/index.html)
 - **Documentation OpenAPI JSON** : [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
 - **Console H2** : [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
 
