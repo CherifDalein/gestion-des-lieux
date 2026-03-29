@@ -16,6 +16,7 @@ public interface IAccessTokenService {
     AccessToken getTokenById(Long id, Long userId);
     AccessToken validateAndGet(String token);
     boolean hasPermission(String token, ResourceType type, Long resourceId, Permission required);
+    boolean canReadPlace(String token, Long placeId);
     void incrementAccessCount(String token);
     AccessToken getTokenByValue(String token);
     AccessTokenDto convertToDto(AccessToken token);

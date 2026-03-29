@@ -12,6 +12,7 @@ import org.example.gestiondeslieux.exceptions.TokenExpiredException;
 import org.example.gestiondeslieux.exceptions.TokenInvalidException;
 import org.example.gestiondeslieux.exceptions.UnauthorizedAccessException;
 import org.example.gestiondeslieux.model.AccessToken;
+import org.example.gestiondeslieux.model.Collection;
 import org.example.gestiondeslieux.model.User;
 import org.example.gestiondeslieux.repository.AccessTokenRepository;
 import org.example.gestiondeslieux.repository.CollectionRepository;
@@ -119,6 +120,41 @@ public class AccessTokenService implements IAccessTokenService {
             if (required == Permission.WRITE && token.getPermission() == Permission.READ) return false;
             if (!isResourceOwnedByUser(type, resourceId, token.getCreatedBy().getId())) return false;
             return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean canReadPlace(String tokenValue, Long placeId) {
+        try {
+            AccessToken token = validateAndGet(tokenValue);
+            if (token.getResourceType() == ResourceType.PLACE) {
+                return token.getResourceId().equals(placeId)
+                        && isResourceOwnedByUser(ResourceType.PLACE, placeId, token.getCreatedBy().getId());
+            }
+            if (token.getResourceType() != ResourceType.COLLECTION) {
+                return false;
+            }
+
+            Collection collection = collectionRepository.findById(token.getResourceId())
+                    .orElse(null);
+            if (collection == null) {
+                return false;
+            }
+            if (!collectionRepository.existsByIdAndUserId(token.getResourceId(), token.getCreatedBy().getId())) {
+                return false;
+            }
+            String tagFilter = collection.getTagFilter();
+            if (tagFilter == null || tagFilter.isBlank()) {
+                return false;
+            }
+
+            return placeRepository.countMatchingSharedCollectionAccess(
+                    placeId,
+                    token.getCreatedBy().getId(),
+                    tagFilter
+            ) > 0;
         } catch (Exception e) {
             return false;
         }

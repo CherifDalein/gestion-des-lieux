@@ -6,8 +6,6 @@ import org.example.gestiondeslieux.dto.ImportExecutionResult;
 import org.example.gestiondeslieux.dto.PlaceDto;
 import org.example.gestiondeslieux.dto.PlaceWithDistanceDto;
 import org.example.gestiondeslieux.enums.ExportFormat;
-import org.example.gestiondeslieux.enums.Permission;
-import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.model.Place;
 import org.example.gestiondeslieux.model.User;
@@ -118,8 +116,7 @@ public class PlaceService implements IPlaceService {
         Place place = placeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Place", "id", id));
         if (userId != null && place.getUser().getId().equals(userId)) return place;
-        if (accessToken != null && accessTokenService.hasPermission(
-                accessToken, ResourceType.PLACE, id, Permission.READ)) {
+        if (accessToken != null && accessTokenService.canReadPlace(accessToken, id)) {
             return place;
         }
         throw new ResourceNotFoundException("Place", "id", id);

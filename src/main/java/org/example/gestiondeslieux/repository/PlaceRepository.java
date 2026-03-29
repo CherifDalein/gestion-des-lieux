@@ -25,6 +25,12 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("SELECT DISTINCT p FROM Place p JOIN p.tags t WHERE p.user.id = :userId AND t = :tag")
     Page<Place> findByUserIdAndTagPaged(@Param("userId") Long userId, @Param("tag") String tag, Pageable pageable);
 
+    @Query("SELECT COUNT(DISTINCT p) FROM Place p JOIN p.tags t " +
+           "WHERE p.id = :placeId AND p.user.id = :userId AND t = :tag")
+    long countMatchingSharedCollectionAccess(@Param("placeId") Long placeId,
+                                             @Param("userId") Long userId,
+                                             @Param("tag") String tag);
+
     @Query("SELECT DISTINCT t FROM Place p JOIN p.tags t WHERE p.user.id = :userId ORDER BY t")
     List<String> findDistinctTagsByUserId(@Param("userId") Long userId);
 

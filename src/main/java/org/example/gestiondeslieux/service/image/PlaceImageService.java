@@ -1,8 +1,6 @@
 package org.example.gestiondeslieux.service.image;
 
 import lombok.RequiredArgsConstructor;
-import org.example.gestiondeslieux.enums.Permission;
-import org.example.gestiondeslieux.enums.ResourceType;
 import org.example.gestiondeslieux.exceptions.ResourceNotFoundException;
 import org.example.gestiondeslieux.exceptions.UnauthorizedAccessException;
 import org.example.gestiondeslieux.model.Place;
@@ -123,8 +121,7 @@ public class PlaceImageService implements IPlaceImageService {
             return image;
         }
         Long placeId = image.getPlace().getId();
-        if (accessToken != null
-                && accessTokenService.hasPermission(accessToken, ResourceType.PLACE, placeId, Permission.READ)) {
+        if (accessToken != null && accessTokenService.canReadPlace(accessToken, placeId)) {
             return image;
         }
         throw new ResourceNotFoundException("PlaceImage", "id", imageId);
